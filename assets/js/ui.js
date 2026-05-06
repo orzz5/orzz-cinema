@@ -4,8 +4,8 @@ import { translations, t } from './i18n.js';
 // State Management
 let currentItem = null;
 let currentServer = 'vidplays';
-let currentAudio = 'en-US';
-let currentSub = 'en-US';
+let currentAudio = 'en';
+let currentSub = 'en';
 
 // UI Registry
 export const UI = {
@@ -82,8 +82,7 @@ export function switchServer(serverType) {
     if (!currentItem) return;
 
     currentServer = serverType;
-    const rawId = currentItem.id.replace('tt', '');
-    const id = `tt${rawId}`;
+    const id = currentItem.id;
     const isTV = currentItem.type === 'TV_SERIES';
     const releaseYear = parseInt(currentItem.startYear);
     const currentYear = new Date().getFullYear();
@@ -104,18 +103,15 @@ export function switchServer(serverType) {
 
     let url = '';
     
-    // ISO Mapping for Vidplays
-    const audioCode = currentAudio === 'es' ? 'es-ES' : 'en-US';
-    const subCode = currentSub === 'es' ? 'es-ES' : 'en-US';
-
-    const audioParam = `&audio_lang=${audioCode}`;
-    const subParam = currentSub === 'none' ? '&subtitle_lang=none' : `&subtitle_lang=${subCode}`;
+    // Most universal parameters for multi-audio players
+    const audioParam = currentAudio === 'es' ? '&audio=es&audio_lang=es' : '&audio=en&audio_lang=en';
+    const subParam = currentSub === 'none' ? '&sub=0&subtitle_lang=none' : `&sub=1&subtitle_lang=${currentSub === 'es' ? 'es' : 'en'}`;
 
     switch(serverType) {
         case 'vidplays':
-            // Added ?type=tv and explicit s/e to prevent 500 errors
+            // Use TMDB style if possible, but keep IMDb for consistency
             url = isTV 
-                ? `https://vidplays.fun/embed/tv/${id}/1/1?type=tv&season=1&episode=1${audioParam}${subParam}` 
+                ? `https://vidplays.fun/embed/tv/${id}/1/1?type=tv&s=1&e=1${audioParam}${subParam}` 
                 : `https://vidplays.fun/embed/movie/${id}?type=movie${audioParam}${subParam}`;
             break;
         case 'vidking':
@@ -129,6 +125,7 @@ export function switchServer(serverType) {
             break;
     }
 
+    // Force iframe reload by setting src
     UI.modal.video.innerHTML = `<iframe src="${url}" allowfullscreen></iframe>`;
     
     // Update server button active state
