@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cinema | Stream Movies & Series</title>
+    <meta name="description" content="Watch the latest movies and series in high quality with our premium streaming platform.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/main.css">
+    <script src="https://kit.fontawesome.com/your-font-awesome-kit.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <header id="main-header">
+        <nav class="container">
+            <div class="logo">
+                <span class="logo-icon">🎬</span>
+                <h1>CINEMA</h1>
+            </div>
+            <div class="search-container">
+                <input type="text" id="movie-search" placeholder="Search movies, series...">
+                <button id="search-btn"><i class="fas fa-search"></i></button>
+            </div>
+            <ul class="nav-links">
+                <li><a href="#" class="active">Home</a></li>
+                <li><a href="#">Movies</a></li>
+                <li><a href="#">Series</a></li>
+                <li><a href="#">Categories</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section id="hero" class="hero-section">
+            <div class="hero-overlay"></div>
+            <div class="container hero-content">
+                <div class="hero-info">
+                    <span class="badge">Featured</span>
+                    <h2 id="hero-title">Loading...</h2>
+                    <p id="hero-desc">Experience the best in entertainment. Browse thousands of movies and series.</p>
+                    <div class="hero-actions">
+                        <button class="btn btn-primary" id="hero-play">
+                            <span class="icon">▶</span> Watch Now
+                        </button>
+                        <button class="btn btn-secondary">More Info</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Movie Sections -->
+        <div class="container main-content">
+            <section class="movie-section">
+                <div class="section-header">
+                    <h2>Trending Now</h2>
+                    <a href="#" class="view-all">View All</a>
+                </div>
+                <div class="movie-grid" id="trending-grid">
+                    <!-- Movies will be injected here -->
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                </div>
+            </section>
+
+            <section class="movie-section">
+                <div class="section-header">
+                    <h2>Top Rated</h2>
+                    <a href="#" class="view-all">View All</a>
+                </div>
+                <div class="movie-grid" id="top-rated-grid">
+                    <!-- Movies will be injected here -->
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                </div>
+            </section>
+
+            <section class="movie-section">
+                <div class="section-header">
+                    <h2>Popular Series</h2>
+                    <a href="#" class="view-all">View All</a>
+                </div>
+                <div class="movie-grid" id="series-grid">
+                    <!-- Series will be injected here -->
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Modal for Video Player -->
+    <div id="player-modal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <div class="video-container">
+                <!-- Vidking iframe will be injected here -->
+                <div id="video-placeholder">Select a movie to watch</div>
+            </div>
+            <div class="movie-details">
+                <h3 id="modal-title">Movie Title</h3>
+                <div class="meta-info">
+                    <span id="modal-year">2024</span>
+                    <span id="modal-rating">⭐ 8.5</span>
+                    <span id="modal-type">Movie</span>
+                </div>
+                <p id="modal-overview">Movie description goes here...</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="assets/js/main.js"></script>
+</body>
+</html>
