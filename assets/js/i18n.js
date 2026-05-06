@@ -14,7 +14,9 @@ export const translations = {
         results: "Results",
         no_content: "No content found.",
         loading: "Loading...",
-        server: "Server"
+        server: "Server",
+        coming_soon: "Coming Soon",
+        coming_soon_desc: "This content has not been released yet. Check back later!"
     },
     es: {
         home: "Inicio",
@@ -31,7 +33,9 @@ export const translations = {
         results: "Resultados",
         no_content: "No se encontró contenido.",
         loading: "Cargando...",
-        server: "Servidor"
+        server: "Servidor",
+        coming_soon: "Próximamente",
+        coming_soon_desc: "Este contenido aún no ha sido estrenado. ¡Vuelve más tarde!"
     }
 };
 

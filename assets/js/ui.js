@@ -1,4 +1,5 @@
 import { getEmbedUrl, API_CONFIG } from './api.js';
+import { translations, t } from './i18n.js';
 
 // State Management
 let currentItem = null;
@@ -77,6 +78,23 @@ export function switchServer(serverType) {
 
     const id = currentItem.id;
     const isTV = currentItem.type === 'TV_SERIES';
+    const releaseYear = parseInt(currentItem.startYear);
+    const currentYear = new Date().getFullYear();
+
+    // Check if unreleased (e.g. 2025, 2026)
+    if (releaseYear > currentYear) {
+        const lang = document.querySelector('#lang-en').classList.contains('active') ? 'en' : 'es';
+        const msg = translations[lang];
+        UI.modal.video.innerHTML = `
+            <div class="coming-soon-msg">
+                <i class="fas fa-calendar-alt"></i>
+                <h2>${msg.coming_soon} (${releaseYear})</h2>
+                <p>${msg.coming_soon_desc}</p>
+            </div>
+        `;
+        return;
+    }
+
     let url = '';
 
     switch(serverType) {
@@ -112,7 +130,7 @@ export function openPlayer(item) {
     UI.modal.rating.textContent = `⭐ ${item.rating?.aggregateRating || 'N/A'}`;
     UI.modal.overview.textContent = item.plot || 'No description available.';
 
-    // Default to Vidking (or Vidsrc for TV)
+    // Default to Vidking
     switchServer('vidking');
 
     UI.modal.el.classList.add('active');
