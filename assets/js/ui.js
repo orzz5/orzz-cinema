@@ -82,7 +82,7 @@ export function switchServer(serverType) {
     if (!currentItem) return;
 
     currentServer = serverType;
-    const id = currentItem.id;
+    const id = currentItem.id.replace('tt', ''); // Normalizing IMDb ID
     const isTV = currentItem.type === 'TV_SERIES';
     const releaseYear = parseInt(currentItem.startYear);
     const currentYear = new Date().getFullYear();
@@ -102,30 +102,37 @@ export function switchServer(serverType) {
     }
 
     let url = '';
-    const audioParam = `&audio=${currentAudio}`;
-    const subParam = `&sub=${currentSub}`;
+    
+    // Correct Vidplays parameters: audio_lang and subtitle_lang
+    const audioParam = `&audio_lang=${currentAudio}`;
+    const subParam = currentSub === 'none' ? '' : `&subtitle_lang=${currentSub}`;
 
     switch(serverType) {
         case 'vidplays':
-            url = isTV ? `https://vidplays.fun/embed/tv/${id}/1/1?${audioParam}${subParam}` : `https://vidplays.fun/embed/movie/${id}?${audioParam}${subParam}`;
+            // Correct TV format: /tv/{id}/{season}/{episode}
+            url = isTV ? `https://vidplays.fun/embed/tv/tt${id}/1/1?${audioParam}${subParam}` : `https://vidplays.fun/embed/movie/tt${id}?${audioParam}${subParam}`;
             break;
         case 'vidking':
-            url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=1&epi=1` : `https://vidking.net/embed/movie/${id}?color=${API_CONFIG.ACCENT_COLOR}`;
+            url = isTV ? `https://vidsrc.me/embed/tv?imdb=tt${id}&sea=1&epi=1` : `https://vidking.net/embed/movie/tt${id}?color=${API_CONFIG.ACCENT_COLOR}`;
             break;
         case 'vidsrc_to':
-            url = isTV ? `https://vidsrc.to/embed/tv/${id}/1/1` : `https://vidsrc.to/embed/movie/${id}`;
+            url = isTV ? `https://vidsrc.to/embed/tv/tt${id}/1/1` : `https://vidsrc.to/embed/movie/tt${id}`;
             break;
         case 'vidsrc_me':
-            url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=1&epi=1` : `https://vidsrc.me/embed/movie?imdb=${id}`;
+            url = isTV ? `https://vidsrc.me/embed/tv?imdb=tt${id}&sea=1&epi=1` : `https://vidsrc.me/embed/movie?imdb=tt${id}`;
             break;
     }
 
     UI.modal.video.innerHTML = `<iframe src="${url}" allowfullscreen></iframe>`;
     
-    // Update button active state
+    // Update server button active state
     UI.modal.serverBtns.forEach(btn => {
         btn.classList.toggle('active', btn.dataset.server === serverType);
     });
+
+    // Update audio/sub button active states
+    UI.modal.audioBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.lang === currentAudio));
+    UI.modal.subBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.lang === currentSub));
 }
 
 /**
@@ -168,7 +175,6 @@ UI.modal.serverBtns.forEach(btn => {
 UI.modal.audioBtns.forEach(btn => {
     btn.onclick = () => {
         currentAudio = btn.dataset.lang;
-        UI.modal.audioBtns.forEach(b => b.classList.toggle('active', b.dataset.lang === currentAudio));
         switchServer(currentServer);
     };
 });
@@ -177,7 +183,6 @@ UI.modal.audioBtns.forEach(btn => {
 UI.modal.subBtns.forEach(btn => {
     btn.onclick = () => {
         currentSub = btn.dataset.lang;
-        UI.modal.subBtns.forEach(b => b.classList.toggle('active', b.dataset.lang === currentSub));
         switchServer(currentServer);
     };
 });
