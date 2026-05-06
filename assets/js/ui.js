@@ -1,5 +1,8 @@
 import { getEmbedUrl, API_CONFIG } from './api.js';
 
+// State Management
+let currentItem = null;
+
 // UI Registry
 export const UI = {
     header: document.querySelector('#main-header'),
@@ -16,7 +19,8 @@ export const UI = {
         title: document.querySelector('#modal-title'),
         year: document.querySelector('#modal-year'),
         rating: document.querySelector('#modal-rating'),
-        overview: document.querySelector('#modal-overview')
+        overview: document.querySelector('#modal-overview'),
+        serverBtns: document.querySelectorAll('.server-btn')
     },
     hero: {
         section: document.querySelector('#hero'),
@@ -39,7 +43,6 @@ export function renderGrid(items, container) {
     items.forEach(item => {
         const card = document.createElement('div');
         card.className = 'movie-card';
-        // The API returns primaryImage as an object with a url property
         const poster = item.primaryImage?.url || `https://via.placeholder.com/300x450/12091d/a855f7?text=${item.primaryTitle}`;
         
         card.innerHTML = `
@@ -67,24 +70,51 @@ export function setupHero(item) {
 }
 
 /**
+ * Update the player source based on selected server
+ */
+export function switchServer(serverType) {
+    if (!currentItem) return;
+
+    const id = currentItem.id;
+    const isTV = currentItem.type === 'TV_SERIES';
+    let url = '';
+
+    switch(serverType) {
+        case 'vidking':
+            url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=1&epi=1` : `https://vidking.net/embed/movie/${id}?color=${API_CONFIG.ACCENT_COLOR}`;
+            break;
+        case 'vidsrc_to':
+            url = isTV ? `https://vidsrc.to/embed/tv/${id}/1/1` : `https://vidsrc.to/embed/movie/${id}`;
+            break;
+        case 'vidsrc_me':
+            url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=1&epi=1` : `https://vidsrc.me/embed/movie?imdb=${id}`;
+            break;
+        case 'embed_2':
+            url = `https://www.2embed.cc/embed${isTV ? 'tv' : ''}/${id}${isTV ? '&s=1&e=1' : ''}`;
+            break;
+    }
+
+    UI.modal.video.innerHTML = `<iframe src="${url}" allowfullscreen></iframe>`;
+    
+    // Update button active state
+    UI.modal.serverBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.server === serverType);
+    });
+}
+
+/**
  * Open the video player modal
  */
 export function openPlayer(item) {
+    currentItem = item;
     UI.modal.title.textContent = item.primaryTitle;
     UI.modal.year.textContent = item.startYear;
     UI.modal.rating.textContent = `⭐ ${item.rating?.aggregateRating || 'N/A'}`;
     UI.modal.overview.textContent = item.plot || 'No description available.';
 
-    const isTV = item.type === 'TV_SERIES';
-    // Official Vidking format as verified by testing
-    let embedUrl = `https://vidking.net/embed/movie/${item.id}?color=${API_CONFIG.ACCENT_COLOR}`;
-    
-    if (isTV) {
-        // Fallback for TV Series
-        embedUrl = `https://vidsrc.me/embed/tv?imdb=${item.id}&sea=1&epi=1`;
-    }
+    // Default to Vidking (or Vidsrc for TV)
+    switchServer('vidking');
 
-    UI.modal.video.innerHTML = `<iframe src="${embedUrl}" allowfullscreen></iframe>`;
     UI.modal.el.classList.add('active');
     document.body.style.overflow = 'hidden';
 }
@@ -93,6 +123,7 @@ export function openPlayer(item) {
  * Close the player modal
  */
 export function closePlayer() {
+    currentItem = null;
     UI.modal.el.classList.remove('active');
     UI.modal.video.innerHTML = '';
     document.body.style.overflow = 'auto';
@@ -101,6 +132,11 @@ export function closePlayer() {
 // Global UI Events
 UI.modal.close.onclick = closePlayer;
 window.onclick = (e) => { if (e.target == UI.modal.el) closePlayer(); };
+
+// Server button events
+UI.modal.serverBtns.forEach(btn => {
+    btn.onclick = () => switchServer(btn.dataset.server);
+});
 
 window.addEventListener('scroll', () => {
     if (window.scrollY > 50) UI.header.classList.add('scrolled');

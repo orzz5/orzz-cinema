@@ -13,7 +13,8 @@ export const translations = {
         view_all: "View All",
         results: "Results",
         no_content: "No content found.",
-        loading: "Loading..."
+        loading: "Loading...",
+        server: "Server"
     },
     es: {
         home: "Inicio",
@@ -29,7 +30,8 @@ export const translations = {
         view_all: "Ver Todo",
         results: "Resultados",
         no_content: "No se encontró contenido.",
-        loading: "Cargando..."
+        loading: "Cargando...",
+        server: "Servidor"
     }
 };
 
