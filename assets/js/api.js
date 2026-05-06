@@ -18,7 +18,8 @@ async function fetchMedia(filters = {}) {
     try {
         const response = await fetch(`${API_CONFIG.IMDB_API}?${queryParams}`);
         const data = await response.json();
-        return data.results || data || [];
+        // The API returns { titles: [...] }
+        return data.titles || data.results || data || [];
     } catch (error) {
         console.error('[API Error]:', error);
         return [];

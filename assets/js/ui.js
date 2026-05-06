@@ -39,13 +39,14 @@ export function renderGrid(items, container) {
     items.forEach(item => {
         const card = document.createElement('div');
         card.className = 'movie-card';
-        const poster = item.primaryImage || `https://via.placeholder.com/300x450/12091d/a855f7?text=${item.titleText}`;
+        // The API returns primaryImage as an object with a url property
+        const poster = item.primaryImage?.url || `https://via.placeholder.com/300x450/12091d/a855f7?text=${item.primaryTitle}`;
         
         card.innerHTML = `
-            <img src="${poster}" alt="${item.titleText}" class="movie-poster" loading="lazy">
+            <img src="${poster}" alt="${item.primaryTitle}" class="movie-poster" loading="lazy">
             <div class="movie-info">
-                <h3>${item.titleText}</h3>
-                <p>${item.releaseYear || ''} • ⭐ ${item.aggregateRating || 'N/A'}</p>
+                <h3>${item.primaryTitle}</h3>
+                <p>${item.startYear || ''} • ⭐ ${item.rating?.aggregateRating || 'N/A'}</p>
             </div>
         `;
         card.onclick = () => openPlayer(item);
@@ -57,11 +58,11 @@ export function renderGrid(items, container) {
  * Setup the Hero section with a featured item
  */
 export function setupHero(item) {
-    if (item.primaryImage) {
-        UI.hero.section.style.backgroundImage = `url('${item.primaryImage}')`;
+    if (item.primaryImage?.url) {
+        UI.hero.section.style.backgroundImage = `url('${item.primaryImage.url}')`;
     }
-    UI.hero.title.textContent = item.titleText;
-    UI.hero.desc.textContent = item.plotSummary || 'Discover the best movies and series on Cinema.';
+    UI.hero.title.textContent = item.primaryTitle;
+    UI.hero.desc.textContent = item.plot || 'Discover the best movies and series on Cinema.';
     UI.hero.playBtn.onclick = () => openPlayer(item);
 }
 
@@ -69,12 +70,12 @@ export function setupHero(item) {
  * Open the video player modal
  */
 export function openPlayer(item) {
-    UI.modal.title.textContent = item.titleText;
-    UI.modal.year.textContent = item.releaseYear;
-    UI.modal.rating.textContent = `⭐ ${item.aggregateRating || 'N/A'}`;
-    UI.modal.overview.textContent = item.plotSummary || 'No description available.';
+    UI.modal.title.textContent = item.primaryTitle;
+    UI.modal.year.textContent = item.startYear;
+    UI.modal.rating.textContent = `⭐ ${item.rating?.aggregateRating || 'N/A'}`;
+    UI.modal.overview.textContent = item.plot || 'No description available.';
 
-    const isTV = item.titleType === 'TV_SERIES';
+    const isTV = item.type === 'TV_SERIES';
     const embedUrl = getEmbedUrl(item.id, isTV);
 
     UI.modal.video.innerHTML = `<iframe src="${embedUrl}" allowfullscreen></iframe>`;
