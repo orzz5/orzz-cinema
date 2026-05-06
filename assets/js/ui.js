@@ -6,6 +6,7 @@ let currentItem = null;
 let currentServer = 'vidplays';
 let currentAudio = 'en';
 let currentSub = 'en';
+let customSubUrl = '';
 
 // UI Registry
 export const UI = {
@@ -26,7 +27,9 @@ export const UI = {
         overview: document.querySelector('#modal-overview'),
         serverBtns: document.querySelectorAll('.server-btn'),
         audioBtns: document.querySelectorAll('#audio-options .lang-btn'),
-        subBtns: document.querySelectorAll('#sub-options .lang-btn')
+        subBtns: document.querySelectorAll('#sub-options .lang-btn'),
+        subInput: document.querySelector('#custom-sub-url'),
+        subApply: document.querySelector('#apply-sub-btn')
     },
     hero: {
         section: document.querySelector('#hero'),
@@ -103,16 +106,24 @@ export function switchServer(serverType) {
 
     let url = '';
     
-    // Most universal parameters for multi-audio players
-    const audioParam = currentAudio === 'es' ? '&audio=es&audio_lang=es' : '&audio=en&audio_lang=en';
-    const subParam = currentSub === 'none' ? '&sub=0&subtitle_lang=none' : `&sub=1&subtitle_lang=${currentSub === 'es' ? 'es' : 'en'}`;
+    // ISO Mapping for Vidplays
+    const audioCode = currentAudio === 'es' ? 'es-ES' : 'en-US';
+    const subCode = currentSub === 'es' ? 'es-ES' : 'en-US';
+
+    const audioParam = `&audio_lang=${audioCode}&audio=${currentAudio}`;
+    const subParam = currentSub === 'none' ? '&sub=0&subtitle_lang=none' : `&sub=1&subtitle_lang=${subCode}`;
+    
+    // External Subtitles Injection
+    let opensubs = '';
+    if (customSubUrl) {
+        opensubs = `&opensubs=${encodeURIComponent(customSubUrl)}|Custom`;
+    }
 
     switch(serverType) {
         case 'vidplays':
-            // Use TMDB style if possible, but keep IMDb for consistency
             url = isTV 
-                ? `https://vidplays.fun/embed/tv/${id}/1/1?type=tv&s=1&e=1${audioParam}${subParam}` 
-                : `https://vidplays.fun/embed/movie/${id}?type=movie${audioParam}${subParam}`;
+                ? `https://vidplays.fun/embed/tv/${id}/1/1?type=tv&s=1&e=1${audioParam}${subParam}${opensubs}` 
+                : `https://vidplays.fun/embed/movie/${id}?type=movie${audioParam}${subParam}${opensubs}`;
             break;
         case 'vidking':
             url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=1&epi=1` : `https://vidking.net/embed/movie/${id}?color=${API_CONFIG.ACCENT_COLOR}`;
@@ -125,7 +136,6 @@ export function switchServer(serverType) {
             break;
     }
 
-    // Force iframe reload by setting src
     UI.modal.video.innerHTML = `<iframe src="${url}" allowfullscreen></iframe>`;
     
     // Update server button active state
@@ -189,6 +199,14 @@ UI.modal.subBtns.forEach(btn => {
         switchServer(currentServer);
     };
 });
+
+// Custom Subtitle Event
+UI.modal.subApply.onclick = () => {
+    customSubUrl = UI.modal.subInput.value.trim();
+    if (customSubUrl) {
+        switchServer(currentServer);
+    }
+};
 
 window.addEventListener('scroll', () => {
     if (window.scrollY > 50) UI.header.classList.add('scrolled');

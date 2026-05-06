@@ -565,6 +565,63 @@ nav {
     font-size: 0.9rem;
 }
 
+/* Subtitle Tools */
+.subtitle-tools {
+    padding: 1rem 2rem;
+    background: rgba(168, 85, 247, 0.05);
+    border-bottom: 1px solid var(--glass-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.subtitle-tools .input-group {
+    display: flex;
+    flex: 1;
+    max-width: 400px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.subtitle-tools input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 0.6rem 1rem;
+    color: white;
+    font-size: 0.8rem;
+    outline: none;
+}
+
+.subtitle-tools button {
+    background: var(--primary-color);
+    border: none;
+    color: white;
+    padding: 0 1rem;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.subtitle-tools button:hover {
+    background: var(--primary-light);
+}
+
+.sub-help {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-style: italic;
+}
+
+.sub-help i {
+    color: var(--primary-color);
+}
+
 #modal-rating {
     color: #fbbf24;
     font-weight: 600;
