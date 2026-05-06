@@ -1,5 +1,6 @@
 import { fetchMedia } from './api.js';
 import { renderGrid, setupHero, UI } from './ui.js';
+import { setLanguage, t } from './i18n.js';
 
 /**
  * Main Application Controller
@@ -31,7 +32,7 @@ async function initApp() {
         
         console.log(`[Cinema] Searching for: ${query}`);
         // Visual feedback
-        UI.grids.trending.parentElement.querySelector('h2').textContent = `Results: ${query}`;
+        UI.grids.trending.parentElement.querySelector('h2').textContent = `${t('results')}: ${query}`;
         UI.grids.trending.innerHTML = '<div class="skeleton-card"></div>'.repeat(5);
 
         const results = await fetchMedia({ query: query });
@@ -43,6 +44,13 @@ async function initApp() {
 
     UI.search.onkeypress = (e) => { if (e.key === 'Enter') performSearch(); };
     document.querySelector('#search-btn').onclick = performSearch;
+
+    // --- Language Implementation ---
+    document.querySelector('#lang-en').onclick = () => setLanguage('en');
+    document.querySelector('#lang-es').onclick = () => setLanguage('es');
+    
+    // Set default language
+    setLanguage('en');
 }
 
 // Start the app when DOM is ready

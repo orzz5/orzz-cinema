@@ -23,10 +23,14 @@
                 <button id="search-btn"><i class="fas fa-search"></i></button>
             </div>
             <ul class="nav-links">
-                <li><a href="#" class="active">Home</a></li>
-                <li><a href="#">Movies</a></li>
-                <li><a href="#">Series</a></li>
-                <li><a href="#">Categories</a></li>
+                <li><a href="#" class="active" data-i18n="home">Home</a></li>
+                <li><a href="#" data-i18n="movies">Movies</a></li>
+                <li><a href="#" data-i18n="series">Series</a></li>
+                <li class="lang-switcher">
+                    <button id="lang-en" class="active">EN</button>
+                    <span>|</span>
+                    <button id="lang-es">ES</button>
+                </li>
             </ul>
         </nav>
     </header>
@@ -37,14 +41,14 @@
             <div class="hero-overlay"></div>
             <div class="container hero-content">
                 <div class="hero-info">
-                    <span class="badge">Featured</span>
-                    <h2 id="hero-title">Loading...</h2>
+                    <span class="badge" data-i18n="featured">Featured</span>
+                    <h2 id="hero-title" data-i18n="loading">Loading...</h2>
                     <p id="hero-desc">Experience the best in entertainment. Browse thousands of movies and series.</p>
                     <div class="hero-actions">
                         <button class="btn btn-primary" id="hero-play">
-                            <span class="icon">▶</span> Watch Now
+                            <span class="icon">▶</span> <span data-i18n="watch_now">Watch Now</span>
                         </button>
-                        <button class="btn btn-secondary">More Info</button>
+                        <button class="btn btn-secondary" data-i18n="more_info">More Info</button>
                     </div>
                 </div>
             </div>
@@ -54,8 +58,8 @@
         <div class="container main-content">
             <section class="movie-section">
                 <div class="section-header">
-                    <h2>Trending Now</h2>
-                    <a href="#" class="view-all">View All</a>
+                    <h2 data-i18n="trending">Trending Now</h2>
+                    <a href="#" class="view-all" data-i18n="view_all">View All</a>
                 </div>
                 <div class="movie-grid" id="trending-grid">
                     <!-- Movies will be injected here -->
@@ -69,8 +73,8 @@
 
             <section class="movie-section">
                 <div class="section-header">
-                    <h2>Top Rated</h2>
-                    <a href="#" class="view-all">View All</a>
+                    <h2 data-i18n="top_rated">Top Rated</h2>
+                    <a href="#" class="view-all" data-i18n="view_all">View All</a>
                 </div>
                 <div class="movie-grid" id="top-rated-grid">
                     <!-- Movies will be injected here -->
@@ -84,8 +88,8 @@
 
             <section class="movie-section">
                 <div class="section-header">
-                    <h2>Popular Series</h2>
-                    <a href="#" class="view-all">View All</a>
+                    <h2 data-i18n="popular_series">Popular Series</h2>
+                    <a href="#" class="view-all" data-i18n="view_all">View All</a>
                 </div>
                 <div class="movie-grid" id="series-grid">
                     <!-- Series will be injected here -->

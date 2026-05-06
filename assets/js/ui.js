@@ -76,11 +76,10 @@ export function openPlayer(item) {
     UI.modal.overview.textContent = item.plot || 'No description available.';
 
     const isTV = item.type === 'TV_SERIES';
-    let embedUrl = `https://www.vidking.net/embed/movie/${item.id}?color=${API_CONFIG.ACCENT_COLOR}`;
+    // Updated to the most stable Vidking viewer format
+    let embedUrl = `https://vidking.net/v/${item.id}?color=${API_CONFIG.ACCENT_COLOR}`;
     
     if (isTV) {
-        // Fallback for TV Series because Vidking requires TMDB IDs for series
-        // vidsrc.me supports IMDb IDs (tt...) directly for TV shows
         embedUrl = `https://vidsrc.me/embed/tv?imdb=${item.id}&sea=1&epi=1`;
     }
 
