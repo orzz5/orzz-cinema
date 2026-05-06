@@ -118,13 +118,28 @@
                 <div id="video-placeholder">Select a movie to watch</div>
             </div>
             <div class="server-selector">
-                <span data-i18n="server">Server:</span>
-                <div class="server-list">
-                    <button class="server-btn active" data-server="vidking">Vidking</button>
-                    <button class="server-btn" data-server="vidplays">Vidplays</button>
-                    <button class="server-btn" data-server="vidsrc_to">Vidsrc TO</button>
-                    <button class="server-btn" data-server="vidsrc_me">Vidsrc ME</button>
-                    <button class="server-btn" data-server="embed_2">2Embed</button>
+                <div class="selector-group">
+                    <span data-i18n="server">Server:</span>
+                    <div class="server-list">
+                        <button class="server-btn active" data-server="vidplays">Vidplays</button>
+                        <button class="server-btn" data-server="vidking">Vidking</button>
+                        <button class="server-btn" data-server="vidsrc_to">Vidsrc TO</button>
+                        <button class="server-btn" data-server="vidsrc_me">Vidsrc ME</button>
+                    </div>
+                </div>
+                <div class="selector-group">
+                    <span>Audio:</span>
+                    <div class="lang-options" id="audio-options">
+                        <button class="lang-btn active" data-lang="en">EN</button>
+                        <button class="lang-btn" data-lang="es">ES</button>
+                    </div>
+                </div>
+                <div class="selector-group">
+                    <span>Subtitles:</span>
+                    <div class="lang-options" id="sub-options">
+                        <button class="lang-btn active" data-lang="en">EN</button>
+                        <button class="lang-btn" data-lang="es">ES</button>
+                    </div>
                 </div>
             </div>
             <div class="movie-details">

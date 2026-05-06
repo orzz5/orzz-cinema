@@ -503,48 +503,58 @@ nav {
     margin-bottom: 1rem;
 }
 
-/* Server Selector */
+/* Server & Language Selector */
 .server-selector {
-    padding: 1rem 2rem;
-    background: rgba(0, 0, 0, 0.3);
+    padding: 1.5rem 2rem;
+    background: rgba(0, 0, 0, 0.4);
     border-bottom: 1px solid var(--glass-border);
     display: flex;
-    align-items: center;
-    gap: 1rem;
+    flex-direction: column;
+    gap: 1.2rem;
 }
 
-.server-selector span {
-    font-size: 0.8rem;
-    font-weight: 600;
+.selector-group {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.selector-group span {
+    min-width: 80px;
+    font-size: 0.75rem;
+    font-weight: 700;
     color: var(--text-muted);
     text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
-.server-list {
+.server-list, .lang-options {
     display: flex;
-    gap: 0.8rem;
+    gap: 0.6rem;
     flex-wrap: wrap;
 }
 
-.server-btn {
-    padding: 0.5rem 1rem;
+.server-btn, .lang-btn {
+    padding: 0.4rem 1rem;
     background: var(--glass);
     border: 1px solid var(--glass-border);
     border-radius: 6px;
     color: white;
     font-size: 0.85rem;
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.server-btn:hover {
+.server-btn:hover, .lang-btn:hover {
     background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
 }
 
-.server-btn.active {
+.server-btn.active, .lang-btn.active {
     background: var(--primary-color);
     border-color: var(--primary-color);
-    box-shadow: 0 0 10px rgba(168, 85, 247, 0.3);
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
 }
 
 .meta-info {

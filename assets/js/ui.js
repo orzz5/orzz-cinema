@@ -3,6 +3,9 @@ import { translations, t } from './i18n.js';
 
 // State Management
 let currentItem = null;
+let currentServer = 'vidplays';
+let currentAudio = 'en';
+let currentSub = 'en';
 
 // UI Registry
 export const UI = {
@@ -21,7 +24,9 @@ export const UI = {
         year: document.querySelector('#modal-year'),
         rating: document.querySelector('#modal-rating'),
         overview: document.querySelector('#modal-overview'),
-        serverBtns: document.querySelectorAll('.server-btn')
+        serverBtns: document.querySelectorAll('.server-btn'),
+        audioBtns: document.querySelectorAll('#audio-options .lang-btn'),
+        subBtns: document.querySelectorAll('#sub-options .lang-btn')
     },
     hero: {
         section: document.querySelector('#hero'),
@@ -71,17 +76,18 @@ export function setupHero(item) {
 }
 
 /**
- * Update the player source based on selected server
+ * Update the player source based on selected server and languages
  */
 export function switchServer(serverType) {
     if (!currentItem) return;
 
+    currentServer = serverType;
     const id = currentItem.id;
     const isTV = currentItem.type === 'TV_SERIES';
     const releaseYear = parseInt(currentItem.startYear);
     const currentYear = new Date().getFullYear();
 
-    // Check if unreleased (e.g. 2025, 2026)
+    // Check if unreleased
     if (releaseYear > currentYear) {
         const lang = document.querySelector('#lang-en').classList.contains('active') ? 'en' : 'es';
         const msg = translations[lang];
@@ -96,22 +102,21 @@ export function switchServer(serverType) {
     }
 
     let url = '';
+    const audioParam = `&audio=${currentAudio}`;
+    const subParam = `&sub=${currentSub}`;
 
     switch(serverType) {
+        case 'vidplays':
+            url = isTV ? `https://vidplays.fun/embed/tv/${id}/1/1?${audioParam}${subParam}` : `https://vidplays.fun/embed/movie/${id}?${audioParam}${subParam}`;
+            break;
         case 'vidking':
             url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=1&epi=1` : `https://vidking.net/embed/movie/${id}?color=${API_CONFIG.ACCENT_COLOR}`;
-            break;
-        case 'vidplays':
-            url = isTV ? `https://vidplays.fun/embed/tv/${id}/1/1` : `https://vidplays.fun/embed/movie/${id}`;
             break;
         case 'vidsrc_to':
             url = isTV ? `https://vidsrc.to/embed/tv/${id}/1/1` : `https://vidsrc.to/embed/movie/${id}`;
             break;
         case 'vidsrc_me':
             url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=1&epi=1` : `https://vidsrc.me/embed/movie?imdb=${id}`;
-            break;
-        case 'embed_2':
-            url = `https://www.2embed.cc/embed${isTV ? 'tv' : ''}/${id}${isTV ? '&s=1&e=1' : ''}`;
             break;
     }
 
@@ -133,8 +138,8 @@ export function openPlayer(item) {
     UI.modal.rating.textContent = `⭐ ${item.rating?.aggregateRating || 'N/A'}`;
     UI.modal.overview.textContent = item.plot || 'No description available.';
 
-    // Default to Vidking
-    switchServer('vidking');
+    // Default to current selection
+    switchServer(currentServer);
 
     UI.modal.el.classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -157,6 +162,24 @@ window.onclick = (e) => { if (e.target == UI.modal.el) closePlayer(); };
 // Server button events
 UI.modal.serverBtns.forEach(btn => {
     btn.onclick = () => switchServer(btn.dataset.server);
+});
+
+// Audio button events
+UI.modal.audioBtns.forEach(btn => {
+    btn.onclick = () => {
+        currentAudio = btn.dataset.lang;
+        UI.modal.audioBtns.forEach(b => b.classList.toggle('active', b.dataset.lang === currentAudio));
+        switchServer(currentServer);
+    };
+});
+
+// Subtitle button events
+UI.modal.subBtns.forEach(btn => {
+    btn.onclick = () => {
+        currentSub = btn.dataset.lang;
+        UI.modal.subBtns.forEach(b => b.classList.toggle('active', b.dataset.lang === currentSub));
+        switchServer(currentServer);
+    };
 });
 
 window.addEventListener('scroll', () => {
