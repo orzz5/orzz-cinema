@@ -4,8 +4,8 @@ import { translations, t } from './i18n.js';
 // State Management
 let currentItem = null;
 let currentServer = 'vidplays';
-let currentAudio = 'en';
-let currentSub = 'en';
+let currentAudio = 'en-US';
+let currentSub = 'en-US';
 
 // UI Registry
 export const UI = {
@@ -82,7 +82,8 @@ export function switchServer(serverType) {
     if (!currentItem) return;
 
     currentServer = serverType;
-    const id = currentItem.id.replace('tt', ''); // Normalizing IMDb ID
+    const rawId = currentItem.id.replace('tt', '');
+    const id = `tt${rawId}`;
     const isTV = currentItem.type === 'TV_SERIES';
     const releaseYear = parseInt(currentItem.startYear);
     const currentYear = new Date().getFullYear();
@@ -103,23 +104,28 @@ export function switchServer(serverType) {
 
     let url = '';
     
-    // Correct Vidplays parameters: audio_lang and subtitle_lang
-    const audioParam = `&audio_lang=${currentAudio}`;
-    const subParam = currentSub === 'none' ? '' : `&subtitle_lang=${currentSub}`;
+    // ISO Mapping for Vidplays
+    const audioCode = currentAudio === 'es' ? 'es-ES' : 'en-US';
+    const subCode = currentSub === 'es' ? 'es-ES' : 'en-US';
+
+    const audioParam = `&audio_lang=${audioCode}`;
+    const subParam = currentSub === 'none' ? '&subtitle_lang=none' : `&subtitle_lang=${subCode}`;
 
     switch(serverType) {
         case 'vidplays':
-            // Correct TV format: /tv/{id}/{season}/{episode}
-            url = isTV ? `https://vidplays.fun/embed/tv/tt${id}/1/1?${audioParam}${subParam}` : `https://vidplays.fun/embed/movie/tt${id}?${audioParam}${subParam}`;
+            // Added ?type=tv and explicit s/e to prevent 500 errors
+            url = isTV 
+                ? `https://vidplays.fun/embed/tv/${id}/1/1?type=tv&season=1&episode=1${audioParam}${subParam}` 
+                : `https://vidplays.fun/embed/movie/${id}?type=movie${audioParam}${subParam}`;
             break;
         case 'vidking':
-            url = isTV ? `https://vidsrc.me/embed/tv?imdb=tt${id}&sea=1&epi=1` : `https://vidking.net/embed/movie/tt${id}?color=${API_CONFIG.ACCENT_COLOR}`;
+            url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=1&epi=1` : `https://vidking.net/embed/movie/${id}?color=${API_CONFIG.ACCENT_COLOR}`;
             break;
         case 'vidsrc_to':
-            url = isTV ? `https://vidsrc.to/embed/tv/tt${id}/1/1` : `https://vidsrc.to/embed/movie/tt${id}`;
+            url = isTV ? `https://vidsrc.to/embed/tv/${id}/1/1` : `https://vidsrc.to/embed/movie/${id}`;
             break;
         case 'vidsrc_me':
-            url = isTV ? `https://vidsrc.me/embed/tv?imdb=tt${id}&sea=1&epi=1` : `https://vidsrc.me/embed/movie?imdb=tt${id}`;
+            url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=1&epi=1` : `https://vidsrc.me/embed/movie?imdb=${id}`;
             break;
     }
 
