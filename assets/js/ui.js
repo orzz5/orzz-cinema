@@ -101,6 +101,9 @@ export function switchServer(serverType) {
         case 'vidking':
             url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=1&epi=1` : `https://vidking.net/embed/movie/${id}?color=${API_CONFIG.ACCENT_COLOR}`;
             break;
+        case 'vidplays':
+            url = isTV ? `https://vidplays.fun/embed/tv/${id}/1/1` : `https://vidplays.fun/embed/movie/${id}`;
+            break;
         case 'vidsrc_to':
             url = isTV ? `https://vidsrc.to/embed/tv/${id}/1/1` : `https://vidsrc.to/embed/movie/${id}`;
             break;
