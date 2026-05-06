@@ -10,15 +10,22 @@ const API_CONFIG = {
  * @param {Object} filters - Search filters (startYear, minAggregateRating, types, etc.)
  */
 async function fetchMedia(filters = {}) {
+    let url = API_CONFIG.IMDB_API;
+    
+    // If a title/query is provided, use the search endpoint
+    if (filters.query) {
+        url = 'https://api.imdbapi.dev/search/titles';
+    }
+
     const queryParams = new URLSearchParams({
         limit: 12,
         ...filters
     });
     
     try {
-        const response = await fetch(`${API_CONFIG.IMDB_API}?${queryParams}`);
+        const response = await fetch(`${url}?${queryParams}`);
         const data = await response.json();
-        // The API returns { titles: [...] }
+        // Search endpoint returns { results: [...] }, titles returns { titles: [...] }
         return data.titles || data.results || data || [];
     } catch (error) {
         console.error('[API Error]:', error);

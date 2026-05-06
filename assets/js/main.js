@@ -31,10 +31,10 @@ async function initApp() {
         
         console.log(`[Cinema] Searching for: ${query}`);
         // Visual feedback
-        UI.grids.trending.parentElement.querySelector('h2').textContent = `Search Results: ${query}`;
+        UI.grids.trending.parentElement.querySelector('h2').textContent = `Results: ${query}`;
         UI.grids.trending.innerHTML = '<div class="skeleton-card"></div>'.repeat(5);
 
-        const results = await fetchMedia({ title: query });
+        const results = await fetchMedia({ query: query });
         renderGrid(results, UI.grids.trending);
         
         // Scroll to results
