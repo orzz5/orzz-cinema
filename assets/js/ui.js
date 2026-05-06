@@ -1,4 +1,4 @@
-import { getEmbedUrl } from './api.js';
+import { getEmbedUrl, API_CONFIG } from './api.js';
 
 // UI Registry
 export const UI = {
@@ -76,10 +76,11 @@ export function openPlayer(item) {
     UI.modal.overview.textContent = item.plot || 'No description available.';
 
     const isTV = item.type === 'TV_SERIES';
-    // Updated to the most stable Vidking viewer format
-    let embedUrl = `https://vidking.net/v/${item.id}?color=${API_CONFIG.ACCENT_COLOR}`;
+    // Official Vidking format as verified by testing
+    let embedUrl = `https://vidking.net/embed/movie/${item.id}?color=${API_CONFIG.ACCENT_COLOR}`;
     
     if (isTV) {
+        // Fallback for TV Series
         embedUrl = `https://vidsrc.me/embed/tv?imdb=${item.id}&sea=1&epi=1`;
     }
 

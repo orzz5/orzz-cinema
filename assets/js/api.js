@@ -6,27 +6,38 @@ const API_CONFIG = {
 };
 
 /**
- * Fetch movies or series from the IMDb API
- * @param {Object} filters - Search filters (startYear, minAggregateRating, types, etc.)
+ * Fetch movies or series from the IMDb API with Smart Caching
  */
 async function fetchMedia(filters = {}) {
-    let url = API_CONFIG.IMDB_API;
+    const cacheKey = `cinema_cache_${JSON.stringify(filters)}`;
+    const cachedData = localStorage.getItem(cacheKey);
     
-    // If a title/query is provided, use the search endpoint
-    if (filters.query) {
-        url = 'https://api.imdbapi.dev/search/titles';
+    // Return cached data if it's less than 1 hour old
+    if (cachedData) {
+        const { timestamp, data } = JSON.parse(cachedData);
+        if (Date.now() - timestamp < 3600000) {
+            console.log('[Cinema] Serving from cache:', filters);
+            return data;
+        }
     }
 
-    const queryParams = new URLSearchParams({
-        limit: 12,
-        ...filters
-    });
+    let url = API_CONFIG.IMDB_API;
+    if (filters.query) url = 'https://api.imdbapi.dev/search/titles';
+
+    const queryParams = new URLSearchParams({ limit: 12, ...filters });
     
     try {
         const response = await fetch(`${url}?${queryParams}`);
         const data = await response.json();
-        // Search endpoint returns { results: [...] }, titles returns { titles: [...] }
-        return data.titles || data.results || data || [];
+        const results = data.titles || data.results || data || [];
+        
+        // Save to cache
+        localStorage.setItem(cacheKey, JSON.stringify({
+            timestamp: Date.now(),
+            data: results
+        }));
+
+        return results;
     } catch (error) {
         console.error('[API Error]:', error);
         return [];
