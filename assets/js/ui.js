@@ -1,7 +1,7 @@
 import { getEmbedUrl, fetchFullDetails, fetchSeason } from './api.js';
 
 let currentItem = null;
-let currentServer = 'vidplays';
+let currentServer = 'vidsrc_to';
 let currentS = 1;
 let currentE = 1;
 let currentAudio = 'en';
@@ -90,34 +90,27 @@ export function switchServer(serverType, force = false) {
     
     UI.modal.video.innerHTML = '<div class="loading-spinner">Syncing Stream...</div>';
     
-    // Clean ID logic: Remove prefixes to avoid server-side confusion
-    let id = currentItem.imdbId || currentItem.tmdbId || currentItem.id;
-    if (typeof id === 'string') id = id.replace('tmdb-', '');
-    
+    // STRICT TMDB ID ONLY - No IMDB Fallback
+    const id = currentItem.tmdbId;
     const isTV = currentItem.type === 'TV_SERIES';
     const lang = langMap[currentAudio] || langMap.en;
     
-    // Minimal parameters to "Un-Trap" the server menu
-    let params = `&audio=${lang.vidsrc}`;
-    
-    // Only add lang hint if NOT English to prevent the Japanese default bug
-    if (currentAudio !== 'en') {
-        params += `&lang=${lang.vidsrc}`;
-    }
+    // Clean parameter string for TMDB-based lookup
+    const params = `&audio=${lang.vidsrc}${currentAudio !== 'en' ? `&lang=${lang.vidsrc}` : ''}`;
     
     let url = '';
     switch(serverType) {
+        case 'vidsrc_to':
+            url = isTV ? `https://vidsrc.to/embed/tv/${id}/${currentS}/${currentE}?${params}` : `https://vidsrc.to/embed/movie/${id}?${params}`;
+            break;
         case 'vidplays':
             url = isTV ? `https://vidplays.fun/embed/tv/${id}/${currentS}/${currentE}?type=tv&s=${currentS}&e=${currentE}${params}` : `https://vidplays.fun/embed/movie/${id}?type=movie${params}`;
             break;
-        case 'vidsrc_to':
-            url = isTV ? `https://vidsrc.to/embed/tv/${id}/${currentS}/${currentE}` : `https://vidsrc.to/embed/movie/${id}`;
-            break;
         case 'vidking':
-            url = isTV ? `https://vidking.net/embed/tv/${id}/${currentS}/${currentE}?color=a855f7` : `https://vidking.net/embed/movie/${id}?color=a855f7`;
+            url = isTV ? `https://vidking.net/embed/tv/${id}/${currentS}/${currentE}` : `https://vidking.net/embed/movie/${id}`;
             break;
         case 'vidsrc_me':
-            url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=${currentS}&epi=${currentE}` : `https://vidsrc.me/embed/movie?imdb=${id}`;
+            url = isTV ? `https://vidsrc.me/embed/tv?tmdb=${id}&sea=${currentS}&epi=${currentE}` : `https://vidsrc.me/embed/movie?tmdb=${id}`;
             break;
     }
 
