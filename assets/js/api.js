@@ -110,7 +110,7 @@ export async function searchMedia(query) {
 export async function fetchFullDetails(tmdbId, type, lang = 'en-US') {
     const mediaType = type === 'TV_SERIES' ? 'tv' : 'movie';
     try {
-        const url = `${apiConfig.baseUrl}/${mediaType}/${tmdbId}?append_to_response=videos,images,credits,recommendations,external_ids&language=${lang}&include_image_language=en,null`;
+        const url = `${apiConfig.baseUrl}/${mediaType}/${tmdbId}?append_to_response=videos,images,credits,recommendations,external_ids,translations&language=${lang}&include_image_language=en,null`;
         const res = await fetch(url, { headers: getHeaders() });
         const data = await res.json();
         
