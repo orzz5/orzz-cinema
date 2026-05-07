@@ -85,18 +85,16 @@ export function setupHero(item) {
 }
 
 export function switchServer(serverType) {
-    if (!currentItem || isSwitching) return;
+    if (!currentItem) return;
     currentServer = serverType;
     
-    // Stability Fix: Clear previous iframe to prevent AbortError
-    UI.modal.video.innerHTML = '<div class="loading-spinner">Loading stream...</div>';
+    UI.modal.video.innerHTML = '<div class="loading-spinner">Syncing Stream...</div>';
     
     const id = currentItem.imdbId || currentItem.id;
     const isTV = currentItem.type === 'TV_SERIES';
     const lang = langMap[currentAudio] || langMap.en;
     
-    // Aggressive Language Parameters for all providers
-    const params = `&audio=${lang.vidsrc}&audio_lang=${lang.tmdb}&lang=${lang.vidsrc}&ds_lang=${lang.vidsrc}`;
+    const params = `&audio=${lang.vidsrc}&audio_lang=${lang.tmdb}&lang=${lang.vidsrc}&ds_lang=${lang.vidsrc}&primary_audio=${lang.vidsrc}`;
     
     let url = '';
     switch(serverType) {
@@ -114,10 +112,9 @@ export function switchServer(serverType) {
             break;
     }
 
-    // Small timeout to allow the browser to clean up the previous HLS request
     setTimeout(() => {
         UI.modal.video.innerHTML = `<iframe src="${url}" allowfullscreen></iframe>`;
-    }, 100);
+    }, 150);
     
     UI.modal.serverBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.server === serverType));
     UI.modal.langBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.lang === currentAudio));
@@ -155,10 +152,11 @@ async function renderEpisodes(tvId, seasonNum) {
 }
 
 export async function openPlayer(item) {
+    currentItem = item; // Set early to allow language switching during initial load
     UI.modal.title.textContent = item.primaryTitle;
     UI.modal.year.textContent = item.startYear;
     UI.modal.rating.textContent = `⭐ ${item.rating?.aggregateRating || 'N/A'}`;
-    UI.modal.overview.textContent = 'Preparing immersive experience...';
+    UI.modal.overview.textContent = 'Initializing localized experience...';
     UI.modal.video.innerHTML = '<div class="loading-spinner">Locating Source...</div>';
     UI.modal.cast.innerHTML = '';
     UI.modal.recommendations.innerHTML = '';
@@ -174,60 +172,69 @@ export async function openPlayer(item) {
 }
 
 async function refreshModalContent(item) {
-    if (isSwitching) return;
+    if (isSwitching || !item) return;
     isSwitching = true;
     
-    const lang = langMap[currentAudio] || langMap.en;
-    const fullData = await fetchFullDetails(item.tmdbId, item.type, lang.tmdb);
+    // Visual feedback that we are loading
+    UI.modal.el.style.opacity = '0.7';
     
-    if (fullData) {
-        const verifiedType = fullData.type || item.type;
-        currentItem = { ...item, ...fullData, type: verifiedType };
+    try {
+        const lang = langMap[currentAudio] || langMap.en;
+        const fullData = await fetchFullDetails(item.tmdbId, item.type, lang.tmdb);
         
-        UI.modal.title.textContent = fullData.title || fullData.name || item.primaryTitle;
-        UI.modal.overview.textContent = fullData.overview || item.plot;
-        UI.modal.type.textContent = verifiedType === 'TV_SERIES' ? 'Series' : 'Movie';
-
-        if (verifiedType === 'TV_SERIES') {
-            UI.modal.tvControls.style.display = 'block';
-            UI.modal.seasonSelect.innerHTML = (fullData.seasons || [])
-                .filter(s => s.season_number > 0)
-                .map(s => `<option value="${s.season_number}" ${s.season_number === currentS ? 'selected' : ''}>${s.name}</option>`)
-                .join('');
+        if (fullData) {
+            const verifiedType = fullData.type || item.type;
+            currentItem = { ...item, ...fullData, type: verifiedType };
             
-            UI.modal.seasonSelect.onchange = (e) => {
-                currentS = parseInt(e.target.value);
-                currentE = 1;
+            UI.modal.title.textContent = fullData.title || fullData.name || item.primaryTitle;
+            UI.modal.overview.textContent = fullData.overview || item.plot;
+            UI.modal.type.textContent = verifiedType === 'TV_SERIES' ? 'Series' : 'Movie';
+
+            if (verifiedType === 'TV_SERIES') {
+                UI.modal.tvControls.style.display = 'block';
+                UI.modal.seasonSelect.innerHTML = (fullData.seasons || [])
+                    .filter(s => s.season_number > 0)
+                    .map(s => `<option value="${s.season_number}" ${s.season_number === currentS ? 'selected' : ''}>${s.name}</option>`)
+                    .join('');
+                
+                UI.modal.seasonSelect.onchange = (e) => {
+                    currentS = parseInt(e.target.value);
+                    currentE = 1;
+                    renderEpisodes(item.tmdbId, currentS);
+                };
                 renderEpisodes(item.tmdbId, currentS);
+            }
+
+            UI.modal.cast.innerHTML = '';
+            fullData.cast.forEach(actor => {
+                const card = document.createElement('div');
+                card.className = 'cast-card';
+                const profile = actor.profile || 'https://via.placeholder.com/130x130/12091d/a855f7?text=No+Photo';
+                card.innerHTML = `
+                    <img src="${profile}" alt="${actor.name}" class="cast-img">
+                    <span class="cast-name">${actor.name}</span>
+                    <span class="cast-role">${actor.character}</span>
+                `;
+                UI.modal.cast.appendChild(card);
+            });
+
+            UI.modal.recommendations.innerHTML = '';
+            renderGrid(fullData.recommendations, UI.modal.recommendations);
+            
+            switchServer(currentServer);
+
+            UI.modal.trailerBtn.onclick = () => {
+                UI.modal.video.innerHTML = fullData.trailerUrl 
+                    ? `<iframe src="${fullData.trailerUrl}" allowfullscreen></iframe>`
+                    : '<div class="error-msg">Trailer not available.</div>';
             };
-            renderEpisodes(item.tmdbId, currentS);
         }
-
-        UI.modal.cast.innerHTML = '';
-        fullData.cast.forEach(actor => {
-            const card = document.createElement('div');
-            card.className = 'cast-card';
-            const profile = actor.profile || 'https://via.placeholder.com/130x130/12091d/a855f7?text=No+Photo';
-            card.innerHTML = `
-                <img src="${profile}" alt="${actor.name}" class="cast-img">
-                <span class="cast-name">${actor.name}</span>
-                <span class="cast-role">${actor.character}</span>
-            `;
-            UI.modal.cast.appendChild(card);
-        });
-
-        UI.modal.recommendations.innerHTML = '';
-        renderGrid(fullData.recommendations, UI.modal.recommendations);
-        
-        switchServer(currentServer);
-
-        UI.modal.trailerBtn.onclick = () => {
-            UI.modal.video.innerHTML = fullData.trailerUrl 
-                ? `<iframe src="${fullData.trailerUrl}" allowfullscreen></iframe>`
-                : '<div class="error-msg">Trailer not available.</div>';
-        };
+    } catch (e) {
+        console.error("Translation Error:", e);
+    } finally {
+        isSwitching = false;
+        UI.modal.el.style.opacity = '1';
     }
-    isSwitching = false;
 }
 
 export function closePlayer() {
@@ -243,7 +250,7 @@ window.onclick = (e) => { if (e.target == UI.modal.el) closePlayer(); };
 UI.modal.serverBtns.forEach(btn => btn.onclick = () => switchServer(btn.dataset.server));
 UI.modal.langBtns.forEach(btn => {
     btn.onclick = async () => {
-        if (currentAudio === btn.dataset.lang || isSwitching) return;
+        if (currentAudio === btn.dataset.lang || isSwitching || !currentItem) return;
         currentAudio = btn.dataset.lang;
         await refreshModalContent(currentItem);
     };
