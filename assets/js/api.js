@@ -7,16 +7,14 @@ let apiConfig = {
 
 const getHeaders = () => ({
     'Authorization': `Bearer ${apiConfig.accessToken}`,
+    'accept': 'application/json',
     'Content-Type': 'application/json;charset=utf-8'
 });
 
-let currentLang = 'en-US';
+const DEFAULT_LANG = 'en-US';
 
 export async function initApi() {
-    if (!apiConfig.accessToken) {
-        console.warn('[Cinema] Missing VITE_ACCESS_KEY. API will fail.');
-        return false;
-    }
+    if (!apiConfig.accessToken) return false;
     try {
         const res = await fetch(`${apiConfig.baseUrl}/configuration`, { headers: getHeaders() });
         const data = await res.json();
@@ -27,10 +25,6 @@ export async function initApi() {
     } catch (e) {
         return false;
     }
-}
-
-export function setApiLanguage(lang) {
-    currentLang = lang === 'es' ? 'es-ES' : 'en-US';
 }
 
 async function normalize(item, type = null) {
@@ -61,23 +55,35 @@ async function normalize(item, type = null) {
 
 export async function fetchTrending(type = 'all') {
     try {
-        const res = await fetch(`${apiConfig.baseUrl}/trending/${type}/week?language=${currentLang}`, { headers: getHeaders() });
+        const url = `${apiConfig.baseUrl}/trending/${type}/week?language=${DEFAULT_LANG}&include_image_language=en,null`;
+        const res = await fetch(url, { headers: getHeaders() });
         const data = await res.json();
         return await Promise.all((data.results || []).slice(0, 12).map(item => normalize(item)));
     } catch (e) { return []; }
 }
 
-export async function fetchTopRated() {
+export async function fetchNowPlaying() {
     try {
-        const res = await fetch(`${apiConfig.baseUrl}/movie/top_rated?language=${currentLang}&page=1`, { headers: getHeaders() });
+        const url = `${apiConfig.baseUrl}/movie/now_playing?language=${DEFAULT_LANG}&page=1`;
+        const res = await fetch(url, { headers: getHeaders() });
         const data = await res.json();
         return await Promise.all((data.results || []).slice(0, 10).map(item => normalize(item, 'movie')));
     } catch (e) { return []; }
 }
 
-export async function fetchSeries() {
+export async function fetchUpcoming() {
     try {
-        const res = await fetch(`${apiConfig.baseUrl}/tv/popular?language=${currentLang}&page=1`, { headers: getHeaders() });
+        const url = `${apiConfig.baseUrl}/movie/upcoming?language=${DEFAULT_LANG}&page=1`;
+        const res = await fetch(url, { headers: getHeaders() });
+        const data = await res.json();
+        return await Promise.all((data.results || []).slice(0, 10).map(item => normalize(item, 'movie')));
+    } catch (e) { return []; }
+}
+
+export async function fetchAiringToday() {
+    try {
+        const url = `${apiConfig.baseUrl}/tv/airing_today?language=${DEFAULT_LANG}&page=1`;
+        const res = await fetch(url, { headers: getHeaders() });
         const data = await res.json();
         return await Promise.all((data.results || []).slice(0, 10).map(item => normalize(item, 'tv')));
     } catch (e) { return []; }
@@ -85,7 +91,8 @@ export async function fetchSeries() {
 
 export async function searchMedia(query) {
     try {
-        const res = await fetch(`${apiConfig.baseUrl}/search/multi?query=${encodeURIComponent(query)}&language=${currentLang}`, { headers: getHeaders() });
+        const url = `${apiConfig.baseUrl}/search/multi?query=${encodeURIComponent(query)}&language=${DEFAULT_LANG}&include_image_language=en,null`;
+        const res = await fetch(url, { headers: getHeaders() });
         const data = await res.json();
         return await Promise.all((data.results || []).filter(i => i.media_type !== 'person').map(item => normalize(item)));
     } catch (e) { return []; }
@@ -94,14 +101,25 @@ export async function searchMedia(query) {
 export async function fetchFullDetails(tmdbId, type) {
     const mediaType = type === 'TV_SERIES' ? 'tv' : 'movie';
     try {
-        const res = await fetch(`${apiConfig.baseUrl}/${mediaType}/${tmdbId}?append_to_response=videos,credits,external_ids&language=${currentLang}`, { headers: getHeaders() });
+        const url = `${apiConfig.baseUrl}/${mediaType}/${tmdbId}?append_to_response=videos,images,credits,recommendations,external_ids&language=${DEFAULT_LANG}&include_image_language=en,null`;
+        const res = await fetch(url, { headers: getHeaders() });
         const data = await res.json();
         
         const trailer = data.videos?.results?.find(v => v.type === 'Trailer' && v.site === 'YouTube');
+        const cast = (data.credits?.cast || []).slice(0, 8).map(c => ({
+            name: c.name,
+            character: c.character,
+            profile: c.profile_path ? `${apiConfig.imageBase}w185${c.profile_path}` : null
+        }));
+
+        const recommendations = await Promise.all((data.recommendations?.results || []).slice(0, 6).map(item => normalize(item, mediaType)));
+
         return {
             ...data,
             trailerUrl: trailer ? `https://www.youtube.com/embed/${trailer.key}` : null,
-            imdbId: data.external_ids?.imdb_id || data.imdb_id
+            imdbId: data.external_ids?.imdb_id || data.imdb_id,
+            cast,
+            recommendations
         };
     } catch (e) { return null; }
 }

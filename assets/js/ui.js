@@ -1,19 +1,16 @@
 import { getEmbedUrl, fetchFullDetails } from './api.js';
-import { translations } from './i18n.js';
 
 let currentItem = null;
 let currentServer = 'vidplays';
-let currentAudio = 'en';
-let currentSub = 'en';
-let customSubUrl = '';
 
 export const UI = {
     header: document.querySelector('#main-header'),
     search: document.querySelector('#movie-search'),
     grids: {
         trending: document.querySelector('#trending-grid'),
-        topRated: document.querySelector('#top-rated-grid'),
-        series: document.querySelector('#series-grid')
+        nowPlaying: document.querySelector('#now-playing-grid'),
+        airingToday: document.querySelector('#airing-today-grid'),
+        upcoming: document.querySelector('#upcoming-grid')
     },
     modal: {
         el: document.querySelector('#player-modal'),
@@ -25,11 +22,9 @@ export const UI = {
         type: document.querySelector('#modal-type'),
         overview: document.querySelector('#modal-overview'),
         serverBtns: document.querySelectorAll('.server-btn'),
-        audioBtns: document.querySelectorAll('#audio-options .lang-btn'),
-        subBtns: document.querySelectorAll('#sub-options .lang-btn'),
-        subInput: document.querySelector('#custom-sub-url'),
-        subApply: document.querySelector('#apply-sub-btn'),
-        trailerBtn: document.querySelector('#watch-trailer-btn')
+        trailerBtn: document.querySelector('#watch-trailer-btn'),
+        cast: document.querySelector('#modal-cast'),
+        recommendations: document.querySelector('#modal-recommendations')
     },
     hero: {
         section: document.querySelector('#hero'),
@@ -40,6 +35,7 @@ export const UI = {
 };
 
 export function renderGrid(items, container) {
+    if (!container) return;
     container.innerHTML = '';
     if (!items || items.length === 0) {
         container.innerHTML = '<p class="error-msg">No content found.</p>';
@@ -66,52 +62,23 @@ export function renderGrid(items, container) {
 export function setupHero(item) {
     if (item.backdrop) {
         UI.hero.section.style.backgroundImage = `url('${item.backdrop}')`;
-    } else if (item.primaryImage?.url) {
-        UI.hero.section.style.backgroundImage = `url('${item.primaryImage.url}')`;
     }
     UI.hero.title.textContent = item.primaryTitle;
-    UI.hero.desc.textContent = item.plot || 'Discover the best movies and series on Cinema.';
+    UI.hero.desc.textContent = item.plot || 'Experience the best cinema content here.';
     UI.hero.playBtn.onclick = () => openPlayer(item);
 }
 
 export function switchServer(serverType) {
     if (!currentItem) return;
-
     currentServer = serverType;
+    
     const id = currentItem.imdbId || currentItem.id;
     const isTV = currentItem.type === 'TV_SERIES';
-    const releaseYear = parseInt(currentItem.startYear);
-    const currentYear = new Date().getFullYear();
-
-    if (releaseYear > currentYear) {
-        const lang = document.querySelector('#lang-en').classList.contains('active') ? 'en' : 'es';
-        const msg = translations[lang];
-        UI.modal.video.innerHTML = `
-            <div class="coming-soon-msg">
-                <i class="fas fa-calendar-alt"></i>
-                <h2>${msg.coming_soon} (${releaseYear})</h2>
-                <p>${msg.coming_soon_desc}</p>
-            </div>
-        `;
-        return;
-    }
-
     let url = '';
-    const audioCode = currentAudio === 'es' ? 'es-ES' : 'en-US';
-    const subCode = currentSub === 'es' ? 'es-ES' : 'en-US';
-    const audioParam = `&audio_lang=${audioCode}&audio=${currentAudio}`;
-    const subParam = currentSub === 'none' ? '&sub=0&subtitle_lang=none' : `&sub=1&subtitle_lang=${subCode}`;
-    
-    let opensubs = '';
-    if (customSubUrl) {
-        opensubs = `&opensubs=${encodeURIComponent(customSubUrl)}|Custom`;
-    }
 
     switch(serverType) {
         case 'vidplays':
-            url = isTV 
-                ? `https://vidplays.fun/embed/tv/${id}/1/1?type=tv&s=1&e=1${audioParam}${subParam}${opensubs}` 
-                : `https://vidplays.fun/embed/movie/${id}?type=movie${audioParam}${subParam}${opensubs}`;
+            url = isTV ? `https://vidplays.fun/embed/tv/${id}/1/1?type=tv&s=1&e=1` : `https://vidplays.fun/embed/movie/${id}?type=movie`;
             break;
         case 'vidking':
             url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=1&epi=1` : `https://vidking.net/embed/movie/${id}?color=a855f7`;
@@ -125,13 +92,7 @@ export function switchServer(serverType) {
     }
 
     UI.modal.video.innerHTML = `<iframe src="${url}" allowfullscreen></iframe>`;
-    
-    UI.modal.serverBtns.forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.server === serverType);
-    });
-
-    UI.modal.audioBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.lang === currentAudio));
-    UI.modal.subBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.lang === currentSub));
+    UI.modal.serverBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.server === serverType));
 }
 
 export async function openPlayer(item) {
@@ -139,10 +100,13 @@ export async function openPlayer(item) {
     UI.modal.year.textContent = item.startYear;
     UI.modal.rating.textContent = `⭐ ${item.rating?.aggregateRating || 'N/A'}`;
     UI.modal.type.textContent = item.type === 'TV_SERIES' ? 'Series' : 'Movie';
-    UI.modal.overview.textContent = 'Fetching details...';
-    UI.modal.video.innerHTML = '<div class="loading-spinner">Locating stream...</div>';
+    UI.modal.overview.textContent = 'Syncing high-quality stream...';
+    UI.modal.video.innerHTML = '<div class="loading-spinner">Locating Source...</div>';
+    UI.modal.cast.innerHTML = '';
+    UI.modal.recommendations.innerHTML = '';
 
     UI.modal.el.classList.add('active');
+    UI.modal.el.scrollTo(0, 0);
     document.body.style.overflow = 'hidden';
 
     const fullData = await fetchFullDetails(item.tmdbId, item.type);
@@ -150,13 +114,29 @@ export async function openPlayer(item) {
         currentItem = { ...item, ...fullData };
         UI.modal.overview.textContent = fullData.overview || item.plot;
         
+        // Render Cast
+        fullData.cast.forEach(actor => {
+            const card = document.createElement('div');
+            card.className = 'cast-card';
+            const profile = actor.profile || 'https://via.placeholder.com/130x130/12091d/a855f7?text=No+Photo';
+            card.innerHTML = `
+                <img src="${profile}" alt="${actor.name}" class="cast-img">
+                <span class="cast-name">${actor.name}</span>
+                <span class="cast-role">${actor.character}</span>
+            `;
+            UI.modal.cast.appendChild(card);
+        });
+
+        // Render Recommendations
+        renderGrid(fullData.recommendations, UI.modal.recommendations);
+
         switchServer(currentServer);
 
         UI.modal.trailerBtn.onclick = () => {
             if (fullData.trailerUrl) {
                 UI.modal.video.innerHTML = `<iframe src="${fullData.trailerUrl}" allowfullscreen></iframe>`;
             } else {
-                alert('Trailer not available.');
+                alert('Trailer not available for this title.');
             }
         };
     }
@@ -171,31 +151,7 @@ export function closePlayer() {
 
 UI.modal.close.onclick = closePlayer;
 window.onclick = (e) => { if (e.target == UI.modal.el) closePlayer(); };
-
-UI.modal.serverBtns.forEach(btn => {
-    btn.onclick = () => switchServer(btn.dataset.server);
-});
-
-UI.modal.audioBtns.forEach(btn => {
-    btn.onclick = () => {
-        currentAudio = btn.dataset.lang;
-        switchServer(currentServer);
-    };
-});
-
-UI.modal.subBtns.forEach(btn => {
-    btn.onclick = () => {
-        currentSub = btn.dataset.lang;
-        switchServer(currentServer);
-    };
-});
-
-UI.modal.subApply.onclick = () => {
-    customSubUrl = UI.modal.subInput.value.trim();
-    if (customSubUrl) {
-        switchServer(currentServer);
-    }
-};
+UI.modal.serverBtns.forEach(btn => btn.onclick = () => switchServer(btn.dataset.server));
 
 window.addEventListener('scroll', () => {
     if (window.scrollY > 50) UI.header.classList.add('scrolled');

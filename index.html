@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cinema | Stream Movies & Series</title>
-    <meta name="description" content="Watch the latest movies and series in high quality with our premium streaming platform.">
+    <title>Cinema | Premium Streaming</title>
+    <meta name="description" content="Experience high-quality streaming with our premium cinema platform.">
     
-    <!-- Speed Optimizations -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://image.tmdb.org">
@@ -24,19 +23,15 @@
             </div>
             <nav>
                 <ul class="nav-links">
-                    <li><a href="#" class="active" data-i18n="home">Home</a></li>
-                    <li><a href="#" data-i18n="movies">Movies</a></li>
-                    <li><a href="#" data-i18n="series">Series</a></li>
+                    <li><a href="#" class="active">Home</a></li>
+                    <li><a href="#">Movies</a></li>
+                    <li><a href="#">Series</a></li>
                 </ul>
             </nav>
             <div class="header-actions">
                 <div class="search-bar">
                     <input type="text" id="movie-search" placeholder="Search movies, series...">
                     <button id="search-btn"><i class="fas fa-search"></i></button>
-                </div>
-                <div class="lang-switch">
-                    <button id="lang-en" class="active">EN</button>
-                    <button id="lang-es">ES</button>
                 </div>
             </div>
         </div>
@@ -50,10 +45,10 @@
                 <p id="hero-desc">Discover the best content here.</p>
                 <div class="hero-btns">
                     <button id="hero-play" class="btn-primary">
-                        <i class="fas fa-play"></i> <span data-i18n="play_now">Play Now</span>
+                        <i class="fas fa-play"></i> Play Now
                     </button>
                     <button class="btn-secondary">
-                        <i class="fas fa-info-circle"></i> <span data-i18n="more_info">More Info</span>
+                        <i class="fas fa-info-circle"></i> More Info
                     </button>
                 </div>
             </div>
@@ -62,49 +57,39 @@
         <div class="container content-wrapper">
             <section class="grid-section">
                 <div class="section-header">
-                    <h2 data-i18n="trending">Trending Now</h2>
-                    <a href="#" class="view-all" data-i18n="view_all">View All <i class="fas fa-chevron-right"></i></a>
+                    <h2>Trending Now</h2>
+                    <a href="#" class="view-all">View All <i class="fas fa-chevron-right"></i></a>
                 </div>
-                <div class="movie-grid" id="trending-grid">
-                    <div class="skeleton-card"></div>
-                    <div class="skeleton-card"></div>
-                    <div class="skeleton-card"></div>
-                    <div class="skeleton-card"></div>
-                    <div class="skeleton-card"></div>
-                </div>
+                <div class="movie-grid" id="trending-grid"></div>
             </section>
 
             <section class="grid-section">
                 <div class="section-header">
-                    <h2 data-i18n="top_rated">Top Rated</h2>
-                    <a href="#" class="view-all" data-i18n="view_all">View All <i class="fas fa-chevron-right"></i></a>
+                    <h2>New Releases</h2>
+                    <a href="#" class="view-all">View All <i class="fas fa-chevron-right"></i></a>
                 </div>
-                <div class="movie-grid" id="top-rated-grid">
-                    <div class="skeleton-card"></div>
-                    <div class="skeleton-card"></div>
-                    <div class="skeleton-card"></div>
-                    <div class="skeleton-card"></div>
-                    <div class="skeleton-card"></div>
-                </div>
+                <div class="movie-grid" id="now-playing-grid"></div>
             </section>
 
             <section class="grid-section">
                 <div class="section-header">
-                    <h2 data-i18n="tv_series">TV Series</h2>
-                    <a href="#" class="view-all" data-i18n="view_all">View All <i class="fas fa-chevron-right"></i></a>
+                    <h2>Airing Today (TV)</h2>
+                    <a href="#" class="view-all">View All <i class="fas fa-chevron-right"></i></a>
                 </div>
-                <div class="movie-grid" id="series-grid">
-                    <div class="skeleton-card"></div>
-                    <div class="skeleton-card"></div>
-                    <div class="skeleton-card"></div>
-                    <div class="skeleton-card"></div>
-                    <div class="skeleton-card"></div>
+                <div class="movie-grid" id="airing-today-grid"></div>
+            </section>
+
+            <section class="grid-section">
+                <div class="section-header">
+                    <h2>Upcoming Blockbusters</h2>
+                    <a href="#" class="view-all">View All <i class="fas fa-chevron-right"></i></a>
                 </div>
+                <div class="movie-grid" id="upcoming-grid"></div>
             </section>
         </div>
     </main>
 
-    <!-- Modal for Video Player -->
+    <!-- Premium Modal for Video Player -->
     <div id="player-modal" class="modal">
         <div class="modal-content">
             <button class="close-modal">&times;</button>
@@ -115,42 +100,13 @@
             <div class="player-controls-container">
                 <div class="control-row">
                     <div class="selector-group">
-                        <span data-i18n="server">Server:</span>
+                        <span>Streaming Server:</span>
                         <div class="server-options">
                             <button class="server-btn active" data-server="vidplays">Vidplays</button>
                             <button class="server-btn" data-server="vidking">Vidking</button>
                             <button class="server-btn" data-server="vidsrc_to">Vidsrc TO</button>
                             <button class="server-btn" data-server="vidsrc_me">Vidsrc ME</button>
                         </div>
-                    </div>
-                </div>
-
-                <div class="control-row">
-                    <div class="selector-group">
-                        <span data-i18n="audio">Audio:</span>
-                        <div class="lang-options" id="audio-options">
-                            <button class="lang-btn active" data-lang="en">EN</button>
-                            <button class="lang-btn" data-lang="es">ES</button>
-                        </div>
-                    </div>
-                    <div class="selector-group">
-                        <span data-i18n="subtitles">Subtitles:</span>
-                        <div class="lang-options" id="sub-options">
-                            <button class="lang-btn" data-lang="none">NONE</button>
-                            <button class="lang-btn active" data-lang="en">EN</button>
-                            <button class="lang-btn" data-lang="es">ES</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="subtitle-tools">
-                    <div class="input-group">
-                        <input type="text" id="custom-sub-url" placeholder="Paste .vtt or .srt URL here...">
-                        <button id="apply-sub-btn"><i class="fas fa-plus"></i></button>
-                    </div>
-                    <div class="sub-help">
-                        <i class="fas fa-info-circle"></i>
-                        <span data-i18n="sub_help">Tip: Use the player menu to upload local files!</span>
                     </div>
                 </div>
             </div>
@@ -170,6 +126,20 @@
                     </button>
                 </div>
                 <p id="modal-overview">Loading movie description...</p>
+
+                <div class="modal-cast-section">
+                    <h4>Cast & Crew</h4>
+                    <div id="modal-cast" class="cast-gallery">
+                        <!-- Actors will be loaded here -->
+                    </div>
+                </div>
+
+                <div class="modal-recommendations-section">
+                    <h4>More Like This</h4>
+                    <div id="modal-recommendations" class="recommendations-grid">
+                        <!-- Similar movies will be loaded here -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
