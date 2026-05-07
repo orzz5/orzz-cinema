@@ -188,6 +188,9 @@ async function refreshModalContent(item) {
             const verifiedType = fullData.type || item.type;
             currentItem = { ...item, ...fullData, type: verifiedType };
             
+            // START THE MOVIE IMMEDIATELY - Don't wait for cast/recommendations
+            switchServer(currentServer);
+            
             UI.modal.title.textContent = fullData.title || fullData.name || item.primaryTitle;
             UI.modal.overview.textContent = fullData.overview || item.plot;
             UI.modal.type.textContent = verifiedType === 'TV_SERIES' ? 'Series' : 'Movie';
@@ -232,8 +235,6 @@ async function refreshModalContent(item) {
                 btn.classList.toggle('disabled', !isAvailable);
             });
             
-            switchServer(currentServer);
-
             UI.modal.trailerBtn.onclick = () => {
                 UI.modal.video.innerHTML = fullData.trailerUrl 
                     ? `<iframe src="${fullData.trailerUrl}" allowfullscreen></iframe>`
