@@ -1,49 +1,58 @@
-import { initApi, fetchTrending, fetchNowPlaying, fetchUpcoming, fetchAiringToday, searchMedia } from './api.js';
-import { renderGrid, setupHero, UI } from './ui.js';
+import { initApi, fetchTrending, fetchNowPlaying, fetchUpcoming, fetchAiringToday } from './api.js';
+import { UI, renderGrid, setupHero } from './ui.js';
 
-async function initApp() {
-    const apiReady = await initApi();
+async function init() {
+    // Show skeletons immediately for instant feedback
+    renderSkeletons();
     
-    if (!apiReady) {
-        document.body.innerHTML += `
-            <div style="position:fixed; bottom:20px; left:20px; background:#ef4444; color:white; padding:15px; border-radius:8px; z-index:9999; font-weight:bold; box-shadow:0 0 20px rgba(0,0,0,0.5);">
-                <i class="fas fa-exclamation-triangle"></i> API ERROR: Missing VITE_ACCESS_KEY
-            </div>
-        `;
+    const apiReady = await initApi();
+    if (!apiReady) return;
+
+    // Load trending first to populate the Hero section
+    const trending = await fetchTrending();
+    if (trending.length > 0) {
+        setupHero(trending[0]);
+        renderGrid(trending, UI.grids.trending);
     }
 
-    const loadData = async () => {
-        const [trending, nowPlaying, airingToday, upcoming] = await Promise.all([
-            fetchTrending('movie'),
-            fetchNowPlaying(),
-            fetchAiringToday(),
-            fetchUpcoming()
-        ]);
+    // Load everything else in parallel for maximum speed
+    const [nowPlaying, airingToday, upcoming] = await Promise.all([
+        fetchNowPlaying(),
+        fetchAiringToday(),
+        fetchUpcoming()
+    ]);
 
-        renderGrid(trending, UI.grids.trending);
-        renderGrid(nowPlaying, UI.grids.nowPlaying);
-        renderGrid(airingToday, UI.grids.airingToday);
-        renderGrid(upcoming, UI.grids.upcoming);
-
-        if (trending.length > 0) {
-            setupHero(trending[0]);
-        }
-    };
-
-    await loadData();
-
-    const performSearch = async () => {
-        const query = UI.search.value.trim();
-        if (query.length < 2) return;
-        
-        UI.grids.trending.innerHTML = '<div class="skeleton-card"></div>'.repeat(6);
-        const results = await searchMedia(query);
-        renderGrid(results, UI.grids.trending);
-        UI.grids.trending.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
-
-    UI.search.onkeypress = (e) => { if (e.key === 'Enter') performSearch(); };
-    document.querySelector('#search-btn').onclick = performSearch;
+    renderGrid(nowPlaying, UI.grids.nowPlaying);
+    renderGrid(airingToday, UI.grids.airingToday);
+    renderGrid(upcoming, UI.grids.upcoming);
 }
 
-document.addEventListener('DOMContentLoaded', initApp);
+function renderSkeletons() {
+    const skeletonHTML = Array(6).fill('<div class="skeleton skeleton-card"></div>').join('');
+    Object.values(UI.grids).forEach(grid => {
+        if (grid) grid.innerHTML = skeletonHTML;
+    });
+}
+
+// Optimized search with debounce to save API resources
+let searchTimeout;
+UI.search.addEventListener('input', (e) => {
+    clearTimeout(searchTimeout);
+    const query = e.target.value.trim();
+    
+    if (query.length < 2) {
+        // Restore grids if search cleared (cached data will make this instant)
+        init();
+        return;
+    }
+
+    searchTimeout = setTimeout(async () => {
+        const results = await import('./api.js').then(api => api.searchMedia(query));
+        // Clear all grids and show results in trending
+        Object.values(UI.grids).forEach(g => g.innerHTML = '');
+        UI.grids.trending.parentElement.querySelector('h2').textContent = `Search results for: "${query}"`;
+        renderGrid(results, UI.grids.trending);
+    }, 500);
+});
+
+document.addEventListener('DOMContentLoaded', init);

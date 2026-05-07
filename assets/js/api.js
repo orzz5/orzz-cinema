@@ -5,6 +5,23 @@ let apiConfig = {
     apiKey: import.meta.env.VITE_API_KEY || ''
 };
 
+const CACHE_TIME = 2 * 60 * 60 * 1000; // 2 hours
+
+function cacheGet(key) {
+    const cached = localStorage.getItem(key);
+    if (!cached) return null;
+    const { timestamp, data } = JSON.parse(cached);
+    if (Date.now() - timestamp > CACHE_TIME) {
+        localStorage.removeItem(key);
+        return null;
+    }
+    return data;
+}
+
+function cacheSet(key, data) {
+    localStorage.setItem(key, JSON.stringify({ timestamp: Date.now(), data }));
+}
+
 const getHeaders = () => ({
     'Authorization': `Bearer ${apiConfig.accessToken}`,
     'accept': 'application/json',
@@ -57,44 +74,68 @@ async function normalize(item, type = null) {
         startYear: (item.release_date || item.first_air_date || '').split('-')[0],
         plot: item.overview,
         rating: { aggregateRating: item.vote_average?.toFixed(1) },
-        primaryImage: { url: item.poster_path ? `${apiConfig.imageBase}w500${item.poster_path}` : null },
+        primaryImage: { url: item.poster_path ? `${apiConfig.imageBase}w342${item.poster_path}` : null },
         backdrop: item.backdrop_path ? `${apiConfig.imageBase}original${item.backdrop_path}` : null
     };
 }
 
 export async function fetchTrending(type = 'all') {
+    const cacheKey = `trending_${type}_${currentAppLang}`;
+    const cached = cacheGet(cacheKey);
+    if (cached) return cached;
+
     try {
         const url = `${apiConfig.baseUrl}/trending/${type}/week?language=${currentAppLang}&include_image_language=en,null`;
         const res = await fetch(url, { headers: getHeaders() });
         const data = await res.json();
-        return await Promise.all((data.results || []).slice(0, 12).map(item => normalize(item)));
+        const results = await Promise.all((data.results || []).slice(0, 12).map(item => normalize(item)));
+        cacheSet(cacheKey, results);
+        return results;
     } catch (e) { return []; }
 }
 
 export async function fetchNowPlaying() {
+    const cacheKey = `now_playing_${currentAppLang}`;
+    const cached = cacheGet(cacheKey);
+    if (cached) return cached;
+
     try {
         const url = `${apiConfig.baseUrl}/movie/now_playing?language=${currentAppLang}&page=1`;
         const res = await fetch(url, { headers: getHeaders() });
         const data = await res.json();
-        return await Promise.all((data.results || []).slice(0, 10).map(item => normalize(item, 'movie')));
+        const results = await Promise.all((data.results || []).slice(0, 10).map(item => normalize(item, 'movie')));
+        cacheSet(cacheKey, results);
+        return results;
     } catch (e) { return []; }
 }
 
 export async function fetchUpcoming() {
+    const cacheKey = `upcoming_${currentAppLang}`;
+    const cached = cacheGet(cacheKey);
+    if (cached) return cached;
+
     try {
         const url = `${apiConfig.baseUrl}/movie/upcoming?language=${currentAppLang}&page=1`;
         const res = await fetch(url, { headers: getHeaders() });
         const data = await res.json();
-        return await Promise.all((data.results || []).slice(0, 10).map(item => normalize(item, 'movie')));
+        const results = await Promise.all((data.results || []).slice(0, 10).map(item => normalize(item, 'movie')));
+        cacheSet(cacheKey, results);
+        return results;
     } catch (e) { return []; }
 }
 
 export async function fetchAiringToday() {
+    const cacheKey = `airing_today_${currentAppLang}`;
+    const cached = cacheGet(cacheKey);
+    if (cached) return cached;
+
     try {
         const url = `${apiConfig.baseUrl}/tv/airing_today?language=${currentAppLang}&page=1`;
         const res = await fetch(url, { headers: getHeaders() });
         const data = await res.json();
-        return await Promise.all((data.results || []).slice(0, 10).map(item => normalize(item, 'tv')));
+        const results = await Promise.all((data.results || []).slice(0, 10).map(item => normalize(item, 'tv')));
+        cacheSet(cacheKey, results);
+        return results;
     } catch (e) { return []; }
 }
 
