@@ -1,7 +1,7 @@
 import { getEmbedUrl, fetchFullDetails, fetchSeason } from './api.js';
 
 let currentItem = null;
-let currentServer = 'vidsrc_to';
+let currentServer = 'vidplays'; // Keeping your preference as default
 let currentS = 1;
 let currentE = 1;
 let currentAudio = 'en';
@@ -94,19 +94,25 @@ export function switchServer(serverType, force = false) {
     const isTV = currentItem.type === 'TV_SERIES';
     const lang = langMap[currentAudio] || langMap.en;
     
-    // THE JAPANESE FIX: ALWAYS send a language parameter to stop the player from "guessing"
-    const params = `&audio=${lang.vidsrc}&lang=${lang.vidsrc}&sub_lang=${lang.vidsrc}`;
+    // TACTICAL FIX: Minimal parameters for Vidplays to prevent 'Region Trapping'
+    let params = `&audio=${lang.vidsrc}`;
+    if (currentAudio !== 'en') {
+        params += `&sub_lang=${lang.vidsrc}&lang=${lang.vidsrc}`;
+    } else {
+        // Force English for English selection to kill the Japanese guess
+        params += `&sub_lang=en&lang=en`;
+    }
     
     let url = '';
     switch(serverType) {
-        case 'vidsrc_to':
-            url = isTV ? `https://vidsrc.to/embed/tv/${id}/${currentS}/${currentE}?${params}` : `https://vidsrc.to/embed/movie/${id}?${params}`;
-            break;
         case 'vidplays':
             url = isTV ? `https://vidplays.fun/embed/tv/${id}/${currentS}/${currentE}?type=tv&s=${currentS}&e=${currentE}${params}` : `https://vidplays.fun/embed/movie/${id}?type=movie${params}`;
             break;
+        case 'vidsrc_to':
+            url = isTV ? `https://vidsrc.to/embed/tv/${id}/${currentS}/${currentE}?${params}` : `https://vidsrc.to/embed/movie/${id}?${params}`;
+            break;
         case 'vidking':
-            url = isTV ? `https://vidking.net/embed/tv/${id}/${currentS}/${currentE}?color=a855f7${params}` : `https://vidking.net/embed/movie/${id}?color=a855f7${params}`;
+            url = isTV ? `https://vidking.net/embed/tv/${id}/${currentS}/${currentE}?color=a855f7` : `https://vidking.net/embed/movie/${id}?color=a855f7`;
             break;
         case 'vidsrc_me':
             url = isTV ? `https://vidsrc.me/embed/tv?tmdb=${id}&sea=${currentS}&epi=${currentE}${params}` : `https://vidsrc.me/embed/movie?tmdb=${id}${params}`;
@@ -222,7 +228,6 @@ async function refreshModalContent(item) {
             UI.modal.recommendations.innerHTML = '';
             renderGrid(fullData.recommendations, UI.modal.recommendations);
 
-            // Stability fix: Null-check for translations to prevent crashes
             const availableLangs = Array.isArray(fullData.translations) ? fullData.translations.map(t => t.iso_639_1) : [];
             UI.modal.langBtns.forEach(btn => {
                 const langCode = btn.dataset.lang;
