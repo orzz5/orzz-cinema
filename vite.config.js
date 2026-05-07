@@ -4,7 +4,7 @@ export default defineConfig({
   base: './',
   build: {
     outDir: 'dist',
-    minify: 'terser',
+    minify: 'esbuild', // Faster and built-in (replaces terser)
     sourcemap: false
   },
   server: {
