@@ -90,13 +90,12 @@ export function switchServer(serverType, force = false) {
     
     UI.modal.video.innerHTML = '<div class="loading-spinner">Syncing Stream...</div>';
     
-    // STRICT TMDB ID ONLY - No IMDB Fallback
     const id = currentItem.tmdbId;
     const isTV = currentItem.type === 'TV_SERIES';
     const lang = langMap[currentAudio] || langMap.en;
     
-    // Clean parameter string for TMDB-based lookup
-    const params = `&audio=${lang.vidsrc}${currentAudio !== 'en' ? `&lang=${lang.vidsrc}` : ''}`;
+    // THE JAPANESE FIX: ALWAYS send a language parameter to stop the player from "guessing"
+    const params = `&audio=${lang.vidsrc}&lang=${lang.vidsrc}&sub_lang=${lang.vidsrc}`;
     
     let url = '';
     switch(serverType) {
@@ -107,10 +106,10 @@ export function switchServer(serverType, force = false) {
             url = isTV ? `https://vidplays.fun/embed/tv/${id}/${currentS}/${currentE}?type=tv&s=${currentS}&e=${currentE}${params}` : `https://vidplays.fun/embed/movie/${id}?type=movie${params}`;
             break;
         case 'vidking':
-            url = isTV ? `https://vidking.net/embed/tv/${id}/${currentS}/${currentE}` : `https://vidking.net/embed/movie/${id}`;
+            url = isTV ? `https://vidking.net/embed/tv/${id}/${currentS}/${currentE}?color=a855f7${params}` : `https://vidking.net/embed/movie/${id}?color=a855f7${params}`;
             break;
         case 'vidsrc_me':
-            url = isTV ? `https://vidsrc.me/embed/tv?tmdb=${id}&sea=${currentS}&epi=${currentE}` : `https://vidsrc.me/embed/movie?tmdb=${id}`;
+            url = isTV ? `https://vidsrc.me/embed/tv?tmdb=${id}&sea=${currentS}&epi=${currentE}${params}` : `https://vidsrc.me/embed/movie?tmdb=${id}${params}`;
             break;
     }
 
@@ -223,7 +222,8 @@ async function refreshModalContent(item) {
             UI.modal.recommendations.innerHTML = '';
             renderGrid(fullData.recommendations, UI.modal.recommendations);
 
-            const availableLangs = (fullData.translations || []).map(t => t.iso_639_1);
+            // Stability fix: Null-check for translations to prevent crashes
+            const availableLangs = Array.isArray(fullData.translations) ? fullData.translations.map(t => t.iso_639_1) : [];
             UI.modal.langBtns.forEach(btn => {
                 const langCode = btn.dataset.lang;
                 if (langCode === 'en') return;
