@@ -8,11 +8,11 @@ let currentAudio = 'en';
 let isSwitching = false;
 
 const langMap = {
-    'en': { tmdb: 'en-US', vidsrc: 'en' },
-    'es': { tmdb: 'es-ES', vidsrc: 'es' },
-    'fr': { tmdb: 'fr-FR', vidsrc: 'fr' },
-    'pt': { tmdb: 'pt-PT', vidsrc: 'pt' },
-    'it': { tmdb: 'it-IT', vidsrc: 'it' }
+    'en': { tmdb: 'en', vidsrc: 'en' },
+    'es': { tmdb: 'es', vidsrc: 'es' },
+    'fr': { tmdb: 'fr', vidsrc: 'fr' },
+    'pt': { tmdb: 'pt', vidsrc: 'pt' },
+    'it': { tmdb: 'it', vidsrc: 'it' }
 };
 
 export const UI = {
@@ -90,16 +90,19 @@ export function switchServer(serverType, force = false) {
     
     UI.modal.video.innerHTML = '<div class="loading-spinner">Syncing Stream...</div>';
     
-    const id = currentItem.imdbId || currentItem.id;
+    // Clean ID logic: Remove prefixes to avoid server-side confusion
+    let id = currentItem.imdbId || currentItem.tmdbId || currentItem.id;
+    if (typeof id === 'string') id = id.replace('tmdb-', '');
+    
     const isTV = currentItem.type === 'TV_SERIES';
     const lang = langMap[currentAudio] || langMap.en;
     
-    // Clean, high-compatibility parameters
-    let params = `&audio=${lang.vidsrc}&audio_lang=${lang.tmdb}`;
+    // Minimal parameters to "Un-Trap" the server menu
+    let params = `&audio=${lang.vidsrc}`;
     
-    // Only force subtitles for non-English languages to avoid the "Japanese Default" bug
+    // Only add lang hint if NOT English to prevent the Japanese default bug
     if (currentAudio !== 'en') {
-        params += `&sub_lang=${lang.vidsrc}&sub=${lang.vidsrc}`;
+        params += `&lang=${lang.vidsrc}`;
     }
     
     let url = '';
@@ -108,13 +111,13 @@ export function switchServer(serverType, force = false) {
             url = isTV ? `https://vidplays.fun/embed/tv/${id}/${currentS}/${currentE}?type=tv&s=${currentS}&e=${currentE}${params}` : `https://vidplays.fun/embed/movie/${id}?type=movie${params}`;
             break;
         case 'vidsrc_to':
-            url = isTV ? `https://vidsrc.to/embed/tv/${id}/${currentS}/${currentE}?${params}` : `https://vidsrc.to/embed/movie/${id}?${params}`;
+            url = isTV ? `https://vidsrc.to/embed/tv/${id}/${currentS}/${currentE}` : `https://vidsrc.to/embed/movie/${id}`;
             break;
         case 'vidking':
             url = isTV ? `https://vidking.net/embed/tv/${id}/${currentS}/${currentE}?color=a855f7` : `https://vidking.net/embed/movie/${id}?color=a855f7`;
             break;
         case 'vidsrc_me':
-            url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=${currentS}&epi=${currentE}${params}` : `https://vidsrc.me/embed/movie?imdb=${id}${params}`;
+            url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=${currentS}&epi=${currentE}` : `https://vidsrc.me/embed/movie?imdb=${id}`;
             break;
     }
 
