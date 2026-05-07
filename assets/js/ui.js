@@ -5,13 +5,14 @@ let currentServer = 'vidplays';
 let currentS = 1;
 let currentE = 1;
 let currentAudio = 'en';
+let isSwitching = false;
 
 const langMap = {
-    'en': 'en-US',
-    'es': 'es-ES',
-    'fr': 'fr-FR',
-    'pt': 'pt-PT',
-    'it': 'it-IT'
+    'en': { tmdb: 'en-US', vidsrc: 'en' },
+    'es': { tmdb: 'es-ES', vidsrc: 'es' },
+    'fr': { tmdb: 'fr-FR', vidsrc: 'fr' },
+    'pt': { tmdb: 'pt-PT', vidsrc: 'pt' },
+    'it': { tmdb: 'it-IT', vidsrc: 'it' }
 };
 
 export const UI = {
@@ -84,34 +85,39 @@ export function setupHero(item) {
 }
 
 export function switchServer(serverType) {
-    if (!currentItem) return;
+    if (!currentItem || isSwitching) return;
     currentServer = serverType;
+    
+    // Stability Fix: Clear previous iframe to prevent AbortError
+    UI.modal.video.innerHTML = '<div class="loading-spinner">Loading stream...</div>';
     
     const id = currentItem.imdbId || currentItem.id;
     const isTV = currentItem.type === 'TV_SERIES';
-    const audioCode = langMap[currentAudio] || 'en-US';
+    const lang = langMap[currentAudio] || langMap.en;
     
-    // Forced audio parameters for Vidplays/Vidsrc compatibility
-    const audioParam = `&audio_lang=${audioCode}&audio=${currentAudio}&lang=${currentAudio}&primary_audio=${currentAudio}`;
+    // Aggressive Language Parameters for all providers
+    const params = `&audio=${lang.vidsrc}&audio_lang=${lang.tmdb}&lang=${lang.vidsrc}&ds_lang=${lang.vidsrc}`;
     
     let url = '';
-
     switch(serverType) {
         case 'vidplays':
-            url = isTV ? `https://vidplays.fun/embed/tv/${id}/${currentS}/${currentE}?type=tv&s=${currentS}&e=${currentE}${audioParam}` : `https://vidplays.fun/embed/movie/${id}?type=movie${audioParam}`;
+            url = isTV ? `https://vidplays.fun/embed/tv/${id}/${currentS}/${currentE}?type=tv&s=${currentS}&e=${currentE}${params}` : `https://vidplays.fun/embed/movie/${id}?type=movie${params}`;
             break;
         case 'vidking':
-            url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=${currentS}&epi=${currentE}${audioParam}` : `https://vidking.net/embed/movie/${id}?color=a855f7${audioParam}`;
+            url = isTV ? `https://vidking.net/embed/tv/${id}/${currentS}/${currentE}?color=a855f7${params}` : `https://vidking.net/embed/movie/${id}?color=a855f7${params}`;
             break;
         case 'vidsrc_to':
-            url = isTV ? `https://vidsrc.to/embed/tv/${id}/${currentS}/${currentE}${audioParam}` : `https://vidsrc.to/embed/movie/${id}${audioParam}`;
+            url = isTV ? `https://vidsrc.to/embed/tv/${id}/${currentS}/${currentE}?${params}` : `https://vidsrc.to/embed/movie/${id}?${params}`;
             break;
         case 'vidsrc_me':
-            url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=${currentS}&epi=${currentE}${audioParam}` : `https://vidsrc.me/embed/movie?imdb=${id}${audioParam}`;
+            url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=${currentS}&epi=${currentE}${params}` : `https://vidsrc.me/embed/movie?imdb=${id}${params}`;
             break;
     }
 
-    UI.modal.video.innerHTML = `<iframe src="${url}" allowfullscreen></iframe>`;
+    // Small timeout to allow the browser to clean up the previous HLS request
+    setTimeout(() => {
+        UI.modal.video.innerHTML = `<iframe src="${url}" allowfullscreen></iframe>`;
+    }, 100);
     
     UI.modal.serverBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.server === serverType));
     UI.modal.langBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.lang === currentAudio));
@@ -119,7 +125,7 @@ export function switchServer(serverType) {
 
 async function renderEpisodes(tvId, seasonNum) {
     UI.modal.episodesGrid.innerHTML = '<div class="loading-spinner">Loading Episodes...</div>';
-    const episodes = await fetchSeason(tvId, seasonNum, langMap[currentAudio]);
+    const episodes = await fetchSeason(tvId, seasonNum, langMap[currentAudio].tmdb);
     UI.modal.episodesGrid.innerHTML = '';
     
     episodes.forEach(ep => {
@@ -152,7 +158,7 @@ export async function openPlayer(item) {
     UI.modal.title.textContent = item.primaryTitle;
     UI.modal.year.textContent = item.startYear;
     UI.modal.rating.textContent = `⭐ ${item.rating?.aggregateRating || 'N/A'}`;
-    UI.modal.overview.textContent = 'Translating metadata and syncing stream...';
+    UI.modal.overview.textContent = 'Preparing immersive experience...';
     UI.modal.video.innerHTML = '<div class="loading-spinner">Locating Source...</div>';
     UI.modal.cast.innerHTML = '';
     UI.modal.recommendations.innerHTML = '';
@@ -168,14 +174,16 @@ export async function openPlayer(item) {
 }
 
 async function refreshModalContent(item) {
-    const audioCode = langMap[currentAudio] || 'en-US';
-    const fullData = await fetchFullDetails(item.tmdbId, item.type, audioCode);
+    if (isSwitching) return;
+    isSwitching = true;
+    
+    const lang = langMap[currentAudio] || langMap.en;
+    const fullData = await fetchFullDetails(item.tmdbId, item.type, lang.tmdb);
     
     if (fullData) {
         const verifiedType = fullData.type || item.type;
         currentItem = { ...item, ...fullData, type: verifiedType };
         
-        // Update translated UI
         UI.modal.title.textContent = fullData.title || fullData.name || item.primaryTitle;
         UI.modal.overview.textContent = fullData.overview || item.plot;
         UI.modal.type.textContent = verifiedType === 'TV_SERIES' ? 'Series' : 'Movie';
@@ -214,13 +222,12 @@ async function refreshModalContent(item) {
         switchServer(currentServer);
 
         UI.modal.trailerBtn.onclick = () => {
-            if (fullData.trailerUrl) {
-                UI.modal.video.innerHTML = `<iframe src="${fullData.trailerUrl}" allowfullscreen></iframe>`;
-            } else {
-                alert('Trailer not available.');
-            }
+            UI.modal.video.innerHTML = fullData.trailerUrl 
+                ? `<iframe src="${fullData.trailerUrl}" allowfullscreen></iframe>`
+                : '<div class="error-msg">Trailer not available.</div>';
         };
     }
+    isSwitching = false;
 }
 
 export function closePlayer() {
@@ -236,9 +243,8 @@ window.onclick = (e) => { if (e.target == UI.modal.el) closePlayer(); };
 UI.modal.serverBtns.forEach(btn => btn.onclick = () => switchServer(btn.dataset.server));
 UI.modal.langBtns.forEach(btn => {
     btn.onclick = async () => {
-        if (currentAudio === btn.dataset.lang) return;
+        if (currentAudio === btn.dataset.lang || isSwitching) return;
         currentAudio = btn.dataset.lang;
-        UI.modal.overview.textContent = 'Translating...';
         await refreshModalContent(currentItem);
     };
 });
