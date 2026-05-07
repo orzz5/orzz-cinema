@@ -28,7 +28,12 @@ export async function initApi() {
 }
 
 async function normalize(item, type = null) {
-    const isTV = type === 'tv' || item.media_type === 'tv' || item.first_air_date !== undefined;
+    // Aggressive TV detection
+    const isTV = type === 'tv' || 
+                 item.media_type === 'tv' || 
+                 item.first_air_date !== undefined || 
+                 item.name !== undefined && item.title === undefined;
+                 
     const mediaType = isTV ? 'tv' : 'movie';
     
     let imdbId = item.imdb_id || null;
@@ -119,7 +124,9 @@ export async function fetchFullDetails(tmdbId, type) {
             trailerUrl: trailer ? `https://www.youtube.com/embed/${trailer.key}` : null,
             imdbId: data.external_ids?.imdb_id || data.imdb_id,
             cast,
-            recommendations
+            recommendations,
+            // Re-verify type in case it was wrong in the grid
+            type: (data.first_air_date || data.name) ? 'TV_SERIES' : 'MOVIE'
         };
     } catch (e) { return null; }
 }

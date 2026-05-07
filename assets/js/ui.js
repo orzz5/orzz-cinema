@@ -111,8 +111,12 @@ export async function openPlayer(item) {
 
     const fullData = await fetchFullDetails(item.tmdbId, item.type);
     if (fullData) {
-        currentItem = { ...item, ...fullData };
+        // Sync the verified type from TMDB
+        const verifiedType = fullData.type || item.type;
+        currentItem = { ...item, ...fullData, type: verifiedType };
+        
         UI.modal.overview.textContent = fullData.overview || item.plot;
+        UI.modal.type.textContent = verifiedType === 'TV_SERIES' ? 'Series' : 'Movie';
         
         // Render Cast
         fullData.cast.forEach(actor => {
