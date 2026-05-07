@@ -1,60 +1,130 @@
-// API Configuration & Fetching Logic
-const API_CONFIG = {
-    IMDB_API: 'https://api.imdbapi.dev/titles',
-    VIDKING_BASE: 'https://www.vidking.net/embed',
+export const API_CONFIG = {
+    BASE_URL: 'https://api.themoviedb.org/3',
+    IMAGE_BASE_URL: 'https://image.tmdb.org/t/p',
+    ACCESS_KEY: import.meta.env.VITE_ACCESS_KEY || '',
+    API_KEY: import.meta.env.VITE_API_KEY || '',
     ACCENT_COLOR: 'a855f7'
 };
 
-/**
- * Fetch movies or series from the IMDb API with Smart Caching
- */
-async function fetchMedia(filters = {}) {
-    const cacheKey = `cinema_cache_${JSON.stringify(filters)}`;
-    const cachedData = localStorage.getItem(cacheKey);
+const HEADERS = {
+    'Authorization': `Bearer ${API_CONFIG.ACCESS_KEY}`,
+    'Content-Type': 'application/json;charset=utf-8'
+};
+
+const cache = {
+    get: (key) => {
+        const item = localStorage.getItem(key);
+        if (!item) return null;
+        const parsed = JSON.parse(item);
+        if (Date.now() > parsed.expiry) {
+            localStorage.removeItem(key);
+            return null;
+        }
+        return parsed.data;
+    },
+    set: (key, data) => {
+        const expiry = Date.now() + 3600000;
+        localStorage.setItem(key, JSON.stringify({ data, expiry }));
+    }
+};
+
+async function normalize(item, type = null) {
+    const isTV = type === 'tv' || item.media_type === 'tv' || item.first_air_date !== undefined;
     
-    // Return cached data if it's less than 1 hour old
-    if (cachedData) {
-        const { timestamp, data } = JSON.parse(cachedData);
-        if (Date.now() - timestamp < 3600000) {
-            console.log('[Cinema] Serving from cache:', filters);
-            return data;
+    let imdbId = item.imdb_id || null;
+    if (!imdbId) {
+        try {
+            const extRes = await fetch(`${API_CONFIG.BASE_URL}/${isTV ? 'tv' : 'movie'}/${item.id}/external_ids`, { headers: HEADERS });
+            const extData = await extRes.json();
+            imdbId = extData.imdb_id;
+        } catch (e) {
+            console.error("Error fetching IMDb ID:", e);
         }
     }
 
-    let url = API_CONFIG.IMDB_API;
-    if (filters.query) url = 'https://api.imdbapi.dev/search/titles';
+    return {
+        id: imdbId || `tmdb-${item.id}`,
+        tmdbId: item.id,
+        primaryTitle: item.title || item.name,
+        type: isTV ? 'TV_SERIES' : 'MOVIE',
+        startYear: (item.release_date || item.first_air_date || '').split('-')[0],
+        plot: item.overview,
+        rating: { aggregateRating: item.vote_average?.toFixed(1) },
+        primaryImage: { url: item.poster_path ? `${API_CONFIG.IMAGE_BASE_URL}/w500${item.poster_path}` : null },
+        backdrop: item.backdrop_path ? `${API_CONFIG.IMAGE_BASE_URL}/original${item.backdrop_path}` : null
+    };
+}
 
-    const queryParams = new URLSearchParams({ limit: 12, ...filters });
-    
+export async function fetchTrending(type = 'all') {
+    const cached = cache.get(`trending_${type}`);
+    if (cached) return cached;
+
     try {
-        const response = await fetch(`${url}?${queryParams}`);
-        const data = await response.json();
-        const results = data.titles || data.results || data || [];
-        
-        // Save to cache
-        localStorage.setItem(cacheKey, JSON.stringify({
-            timestamp: Date.now(),
-            data: results
-        }));
-
+        const res = await fetch(`${API_CONFIG.BASE_URL}/trending/${type}/week?language=en-US`, { headers: HEADERS });
+        const data = await res.json();
+        const results = await Promise.all(data.results.slice(0, 12).map(item => normalize(item)));
+        cache.set(`trending_${type}`, results);
         return results;
     } catch (error) {
-        console.error('[API Error]:', error);
+        console.error('Error fetching trending:', error);
         return [];
     }
 }
 
-/**
- * Get the Vidking embed URL for a specific ID
- * @param {string} id - IMDb ID (tt...)
- * @param {boolean} isTV - Whether it's a TV series
- */
-function getEmbedUrl(id, isTV = false) {
-    if (isTV) {
-        // Default to Season 1 Episode 1
-        return `${API_CONFIG.VIDKING_BASE}/tv/${id}/1/1?color=${API_CONFIG.ACCENT_COLOR}`;
+export async function searchMedia(query) {
+    try {
+        const res = await fetch(`${API_CONFIG.BASE_URL}/search/multi?query=${encodeURIComponent(query)}&language=en-US`, { headers: HEADERS });
+        const data = await res.json();
+        return await Promise.all(data.results.filter(i => i.media_type !== 'person').map(item => normalize(item)));
+    } catch (error) {
+        console.error('Search error:', error);
+        return [];
     }
-    return `${API_CONFIG.VIDKING_BASE}/movie/${id}?color=${API_CONFIG.ACCENT_COLOR}`;
 }
 
-export { API_CONFIG, fetchMedia, getEmbedUrl };
+export async function fetchTopRated() {
+    const cached = cache.get('top_rated');
+    if (cached) return cached;
+
+    try {
+        const res = await fetch(`${API_CONFIG.BASE_URL}/movie/top_rated?language=en-US&page=1`, { headers: HEADERS });
+        const data = await res.json();
+        const results = await Promise.all(data.results.slice(0, 10).map(item => normalize(item, 'movie')));
+        cache.set('top_rated', results);
+        return results;
+    } catch (error) {
+        console.error('Error fetching top rated:', error);
+        return [];
+    }
+}
+
+export async function fetchSeries() {
+    const cached = cache.get('popular_series');
+    if (cached) return cached;
+
+    try {
+        const res = await fetch(`${API_CONFIG.BASE_URL}/tv/popular?language=en-US&page=1`, { headers: HEADERS });
+        const data = await res.json();
+        const results = await Promise.all(data.results.slice(0, 10).map(item => normalize(item, 'tv')));
+        cache.set('popular_series', results);
+        return results;
+    } catch (error) {
+        console.error('Error fetching series:', error);
+        return [];
+    }
+}
+
+export async function fetchTrailer(tmdbId, type) {
+    try {
+        const res = await fetch(`${API_CONFIG.BASE_URL}/${type === 'MOVIE' ? 'movie' : 'tv'}/${tmdbId}/videos?language=en-US`, { headers: HEADERS });
+        const data = await res.json();
+        const trailer = data.results.find(v => v.type === 'Trailer' && v.site === 'YouTube');
+        return trailer ? `https://www.youtube.com/embed/${trailer.key}` : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+export function getEmbedUrl(type, id) {
+    return `https://vidplays.fun/embed/${type === 'MOVIE' ? 'movie' : 'tv'}/${id}`;
+}

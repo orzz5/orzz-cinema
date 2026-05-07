@@ -57,10 +57,11 @@ export function setLanguage(lang) {
     }
     
     // Update active state in switcher
-    document.querySelectorAll('.lang-switcher button').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    document.querySelector(`#lang-${lang}`).classList.add('active');
+    const switcherBtns = document.querySelectorAll('.lang-switcher button');
+    switcherBtns.forEach(btn => btn.classList.remove('active'));
+    
+    const activeBtn = document.querySelector(`#lang-${lang}`);
+    if (activeBtn) activeBtn.classList.add('active');
 }
 
 export function t(key) {

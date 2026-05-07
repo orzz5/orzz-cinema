@@ -1,14 +1,12 @@
-import { getEmbedUrl, API_CONFIG } from './api.js';
+import { getEmbedUrl, API_CONFIG, fetchTrailer } from './api.js';
 import { translations, t } from './i18n.js';
 
-// State Management
 let currentItem = null;
 let currentServer = 'vidplays';
 let currentAudio = 'en';
 let currentSub = 'en';
 let customSubUrl = '';
 
-// UI Registry
 export const UI = {
     header: document.querySelector('#main-header'),
     search: document.querySelector('#movie-search'),
@@ -24,12 +22,14 @@ export const UI = {
         title: document.querySelector('#modal-title'),
         year: document.querySelector('#modal-year'),
         rating: document.querySelector('#modal-rating'),
+        type: document.querySelector('#modal-type'),
         overview: document.querySelector('#modal-overview'),
         serverBtns: document.querySelectorAll('.server-btn'),
         audioBtns: document.querySelectorAll('#audio-options .lang-btn'),
         subBtns: document.querySelectorAll('#sub-options .lang-btn'),
         subInput: document.querySelector('#custom-sub-url'),
-        subApply: document.querySelector('#apply-sub-btn')
+        subApply: document.querySelector('#apply-sub-btn'),
+        trailerBtn: document.querySelector('#watch-trailer-btn')
     },
     hero: {
         section: document.querySelector('#hero'),
@@ -39,9 +39,6 @@ export const UI = {
     }
 };
 
-/**
- * Render a list of media items into a container
- */
 export function renderGrid(items, container) {
     container.innerHTML = '';
     if (!items || items.length === 0) {
@@ -66,11 +63,10 @@ export function renderGrid(items, container) {
     });
 }
 
-/**
- * Setup the Hero section with a featured item
- */
 export function setupHero(item) {
-    if (item.primaryImage?.url) {
+    if (item.backdrop) {
+        UI.hero.section.style.backgroundImage = `url('${item.backdrop}')`;
+    } else if (item.primaryImage?.url) {
         UI.hero.section.style.backgroundImage = `url('${item.primaryImage.url}')`;
     }
     UI.hero.title.textContent = item.primaryTitle;
@@ -78,9 +74,6 @@ export function setupHero(item) {
     UI.hero.playBtn.onclick = () => openPlayer(item);
 }
 
-/**
- * Update the player source based on selected server and languages
- */
 export function switchServer(serverType) {
     if (!currentItem) return;
 
@@ -90,7 +83,6 @@ export function switchServer(serverType) {
     const releaseYear = parseInt(currentItem.startYear);
     const currentYear = new Date().getFullYear();
 
-    // Check if unreleased
     if (releaseYear > currentYear) {
         const lang = document.querySelector('#lang-en').classList.contains('active') ? 'en' : 'es';
         const msg = translations[lang];
@@ -106,14 +98,12 @@ export function switchServer(serverType) {
 
     let url = '';
     
-    // ISO Mapping for Vidplays
     const audioCode = currentAudio === 'es' ? 'es-ES' : 'en-US';
     const subCode = currentSub === 'es' ? 'es-ES' : 'en-US';
 
     const audioParam = `&audio_lang=${audioCode}&audio=${currentAudio}`;
     const subParam = currentSub === 'none' ? '&sub=0&subtitle_lang=none' : `&sub=1&subtitle_lang=${subCode}`;
     
-    // External Subtitles Injection
     let opensubs = '';
     if (customSubUrl) {
         opensubs = `&opensubs=${encodeURIComponent(customSubUrl)}|Custom`;
@@ -138,36 +128,40 @@ export function switchServer(serverType) {
 
     UI.modal.video.innerHTML = `<iframe src="${url}" allowfullscreen></iframe>`;
     
-    // Update server button active state
     UI.modal.serverBtns.forEach(btn => {
         btn.classList.toggle('active', btn.dataset.server === serverType);
     });
 
-    // Update audio/sub button active states
     UI.modal.audioBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.lang === currentAudio));
     UI.modal.subBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.lang === currentSub));
 }
 
-/**
- * Open the video player modal
- */
 export function openPlayer(item) {
     currentItem = item;
     UI.modal.title.textContent = item.primaryTitle;
     UI.modal.year.textContent = item.startYear;
     UI.modal.rating.textContent = `⭐ ${item.rating?.aggregateRating || 'N/A'}`;
+    UI.modal.type.textContent = item.type === 'TV_SERIES' ? 'Series' : 'Movie';
     UI.modal.overview.textContent = item.plot || 'No description available.';
 
-    // Default to current selection
+    customSubUrl = '';
+    UI.modal.subInput.value = '';
+
     switchServer(currentServer);
+
+    UI.modal.trailerBtn.onclick = async () => {
+        const trailerUrl = await fetchTrailer(item.tmdbId, item.type);
+        if (trailerUrl) {
+            UI.modal.video.innerHTML = `<iframe src="${trailerUrl}" allowfullscreen></iframe>`;
+        } else {
+            alert('Trailer not available for this title.');
+        }
+    };
 
     UI.modal.el.classList.add('active');
     document.body.style.overflow = 'hidden';
 }
 
-/**
- * Close the player modal
- */
 export function closePlayer() {
     currentItem = null;
     UI.modal.el.classList.remove('active');
@@ -175,16 +169,13 @@ export function closePlayer() {
     document.body.style.overflow = 'auto';
 }
 
-// Global UI Events
 UI.modal.close.onclick = closePlayer;
 window.onclick = (e) => { if (e.target == UI.modal.el) closePlayer(); };
 
-// Server button events
 UI.modal.serverBtns.forEach(btn => {
     btn.onclick = () => switchServer(btn.dataset.server);
 });
 
-// Audio button events
 UI.modal.audioBtns.forEach(btn => {
     btn.onclick = () => {
         currentAudio = btn.dataset.lang;
@@ -192,7 +183,6 @@ UI.modal.audioBtns.forEach(btn => {
     };
 });
 
-// Subtitle button events
 UI.modal.subBtns.forEach(btn => {
     btn.onclick = () => {
         currentSub = btn.dataset.lang;
@@ -200,7 +190,6 @@ UI.modal.subBtns.forEach(btn => {
     };
 });
 
-// Custom Subtitle Event
 UI.modal.subApply.onclick = () => {
     customSubUrl = UI.modal.subInput.value.trim();
     if (customSubUrl) {
