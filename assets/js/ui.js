@@ -4,6 +4,15 @@ let currentItem = null;
 let currentServer = 'vidplays';
 let currentS = 1;
 let currentE = 1;
+let currentAudio = 'en';
+
+const langMap = {
+    'en': 'en-US',
+    'es': 'es-ES',
+    'fr': 'fr-FR',
+    'pt': 'pt-PT',
+    'it': 'it-IT'
+};
 
 export const UI = {
     header: document.querySelector('#main-header'),
@@ -24,6 +33,7 @@ export const UI = {
         type: document.querySelector('#modal-type'),
         overview: document.querySelector('#modal-overview'),
         serverBtns: document.querySelectorAll('.server-btn'),
+        langBtns: document.querySelectorAll('.lang-btn'),
         trailerBtn: document.querySelector('#watch-trailer-btn'),
         cast: document.querySelector('#modal-cast'),
         recommendations: document.querySelector('#modal-recommendations'),
@@ -79,11 +89,14 @@ export function switchServer(serverType) {
     
     const id = currentItem.imdbId || currentItem.id;
     const isTV = currentItem.type === 'TV_SERIES';
+    const audioCode = langMap[currentAudio] || 'en-US';
+    const audioParam = `&audio_lang=${audioCode}&audio=${currentAudio}`;
+    
     let url = '';
 
     switch(serverType) {
         case 'vidplays':
-            url = isTV ? `https://vidplays.fun/embed/tv/${id}/${currentS}/${currentE}?type=tv&s=${currentS}&e=${currentE}` : `https://vidplays.fun/embed/movie/${id}?type=movie`;
+            url = isTV ? `https://vidplays.fun/embed/tv/${id}/${currentS}/${currentE}?type=tv&s=${currentS}&e=${currentE}${audioParam}` : `https://vidplays.fun/embed/movie/${id}?type=movie${audioParam}`;
             break;
         case 'vidking':
             url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=${currentS}&epi=${currentE}` : `https://vidking.net/embed/movie/${id}?color=a855f7`;
@@ -97,7 +110,9 @@ export function switchServer(serverType) {
     }
 
     UI.modal.video.innerHTML = `<iframe src="${url}" allowfullscreen></iframe>`;
+    
     UI.modal.serverBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.server === serverType));
+    UI.modal.langBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.lang === currentAudio));
 }
 
 async function renderEpisodes(tvId, seasonNum) {
@@ -203,7 +218,14 @@ export function closePlayer() {
 
 UI.modal.close.onclick = closePlayer;
 window.onclick = (e) => { if (e.target == UI.modal.el) closePlayer(); };
+
 UI.modal.serverBtns.forEach(btn => btn.onclick = () => switchServer(btn.dataset.server));
+UI.modal.langBtns.forEach(btn => {
+    btn.onclick = () => {
+        currentAudio = btn.dataset.lang;
+        switchServer(currentServer);
+    };
+});
 
 window.addEventListener('scroll', () => {
     if (window.scrollY > 50) UI.header.classList.add('scrolled');

@@ -74,9 +74,10 @@ header.scrolled { background: rgba(18, 9, 29, 0.98); border-bottom: 1px solid va
 .video-container iframe { width: 100%; height: 100%; border: none; }
 
 .player-controls-container { padding: 1.5rem 2rem; border-bottom: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); }
-.server-options { display: flex; gap: 0.8rem; margin-top: 0.5rem; }
-.server-btn { padding: 0.6rem 1.2rem; background: var(--glass); border: 1px solid var(--glass-border); color: white; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: 0.3s; }
-.server-btn.active { background: var(--primary-color); border-color: var(--primary-color); box-shadow: 0 0 15px rgba(168, 85, 247, 0.4); }
+.server-options, .lang-options { display: flex; gap: 0.8rem; margin-top: 0.5rem; }
+.server-btn, .lang-btn { padding: 0.6rem 1.2rem; background: var(--glass); border: 1px solid var(--glass-border); color: white; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: 0.3s; }
+.lang-btn { border-radius: 50px; min-width: 50px; padding: 0.6rem; text-align: center; }
+.server-btn.active, .lang-btn.active { background: var(--primary-color); border-color: var(--primary-color); box-shadow: 0 0 15px rgba(168, 85, 247, 0.4); }
 
 .movie-details { padding: 2.5rem; }
 .details-main { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; }
