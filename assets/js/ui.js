@@ -1,5 +1,5 @@
-import { getEmbedUrl, API_CONFIG, fetchTrailer } from './api.js';
-import { translations, t } from './i18n.js';
+import { getEmbedUrl, fetchFullDetails } from './api.js';
+import { translations } from './i18n.js';
 
 let currentItem = null;
 let currentServer = 'vidplays';
@@ -78,7 +78,7 @@ export function switchServer(serverType) {
     if (!currentItem) return;
 
     currentServer = serverType;
-    const id = currentItem.id;
+    const id = currentItem.imdbId || currentItem.id;
     const isTV = currentItem.type === 'TV_SERIES';
     const releaseYear = parseInt(currentItem.startYear);
     const currentYear = new Date().getFullYear();
@@ -97,10 +97,8 @@ export function switchServer(serverType) {
     }
 
     let url = '';
-    
     const audioCode = currentAudio === 'es' ? 'es-ES' : 'en-US';
     const subCode = currentSub === 'es' ? 'es-ES' : 'en-US';
-
     const audioParam = `&audio_lang=${audioCode}&audio=${currentAudio}`;
     const subParam = currentSub === 'none' ? '&sub=0&subtitle_lang=none' : `&sub=1&subtitle_lang=${subCode}`;
     
@@ -116,7 +114,7 @@ export function switchServer(serverType) {
                 : `https://vidplays.fun/embed/movie/${id}?type=movie${audioParam}${subParam}${opensubs}`;
             break;
         case 'vidking':
-            url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=1&epi=1` : `https://vidking.net/embed/movie/${id}?color=${API_CONFIG.ACCENT_COLOR}`;
+            url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=1&epi=1` : `https://vidking.net/embed/movie/${id}?color=a855f7`;
             break;
         case 'vidsrc_to':
             url = isTV ? `https://vidsrc.to/embed/tv/${id}/1/1` : `https://vidsrc.to/embed/movie/${id}`;
@@ -136,30 +134,32 @@ export function switchServer(serverType) {
     UI.modal.subBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.lang === currentSub));
 }
 
-export function openPlayer(item) {
-    currentItem = item;
+export async function openPlayer(item) {
     UI.modal.title.textContent = item.primaryTitle;
     UI.modal.year.textContent = item.startYear;
     UI.modal.rating.textContent = `⭐ ${item.rating?.aggregateRating || 'N/A'}`;
     UI.modal.type.textContent = item.type === 'TV_SERIES' ? 'Series' : 'Movie';
-    UI.modal.overview.textContent = item.plot || 'No description available.';
-
-    customSubUrl = '';
-    UI.modal.subInput.value = '';
-
-    switchServer(currentServer);
-
-    UI.modal.trailerBtn.onclick = async () => {
-        const trailerUrl = await fetchTrailer(item.tmdbId, item.type);
-        if (trailerUrl) {
-            UI.modal.video.innerHTML = `<iframe src="${trailerUrl}" allowfullscreen></iframe>`;
-        } else {
-            alert('Trailer not available for this title.');
-        }
-    };
+    UI.modal.overview.textContent = 'Fetching details...';
+    UI.modal.video.innerHTML = '<div class="loading-spinner">Locating stream...</div>';
 
     UI.modal.el.classList.add('active');
     document.body.style.overflow = 'hidden';
+
+    const fullData = await fetchFullDetails(item.tmdbId, item.type);
+    if (fullData) {
+        currentItem = { ...item, ...fullData };
+        UI.modal.overview.textContent = fullData.overview || item.plot;
+        
+        switchServer(currentServer);
+
+        UI.modal.trailerBtn.onclick = () => {
+            if (fullData.trailerUrl) {
+                UI.modal.video.innerHTML = `<iframe src="${fullData.trailerUrl}" allowfullscreen></iframe>`;
+            } else {
+                alert('Trailer not available.');
+            }
+        };
+    }
 }
 
 export function closePlayer() {

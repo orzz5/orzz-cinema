@@ -1,45 +1,49 @@
-export const API_CONFIG = {
-    BASE_URL: 'https://api.themoviedb.org/3',
-    IMAGE_BASE_URL: 'https://image.tmdb.org/t/p',
-    ACCESS_KEY: import.meta.env.VITE_ACCESS_KEY || '',
-    API_KEY: import.meta.env.VITE_API_KEY || '',
-    ACCENT_COLOR: 'a855f7'
+let apiConfig = {
+    baseUrl: 'https://api.themoviedb.org/3',
+    imageBase: 'https://image.tmdb.org/t/p',
+    accessToken: import.meta.env.VITE_ACCESS_KEY || '',
+    apiKey: import.meta.env.VITE_API_KEY || ''
 };
 
-const HEADERS = {
-    'Authorization': `Bearer ${API_CONFIG.ACCESS_KEY}`,
+const getHeaders = () => ({
+    'Authorization': `Bearer ${apiConfig.accessToken}`,
     'Content-Type': 'application/json;charset=utf-8'
-};
+});
 
-const cache = {
-    get: (key) => {
-        const item = localStorage.getItem(key);
-        if (!item) return null;
-        const parsed = JSON.parse(item);
-        if (Date.now() > parsed.expiry) {
-            localStorage.removeItem(key);
-            return null;
-        }
-        return parsed.data;
-    },
-    set: (key, data) => {
-        const expiry = Date.now() + 3600000;
-        localStorage.setItem(key, JSON.stringify({ data, expiry }));
+let currentLang = 'en-US';
+
+export async function initApi() {
+    if (!apiConfig.accessToken) {
+        console.warn('[Cinema] Missing VITE_ACCESS_KEY. API will fail.');
+        return false;
     }
-};
+    try {
+        const res = await fetch(`${apiConfig.baseUrl}/configuration`, { headers: getHeaders() });
+        const data = await res.json();
+        if (data.images) {
+            apiConfig.imageBase = data.images.secure_base_url;
+        }
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+export function setApiLanguage(lang) {
+    currentLang = lang === 'es' ? 'es-ES' : 'en-US';
+}
 
 async function normalize(item, type = null) {
     const isTV = type === 'tv' || item.media_type === 'tv' || item.first_air_date !== undefined;
-    let imdbId = item.imdb_id || null;
+    const mediaType = isTV ? 'tv' : 'movie';
     
-    if (API_CONFIG.ACCESS_KEY && !imdbId) {
+    let imdbId = item.imdb_id || null;
+    if (!imdbId && apiConfig.accessToken) {
         try {
-            const extRes = await fetch(`${API_CONFIG.BASE_URL}/${isTV ? 'tv' : 'movie'}/${item.id}/external_ids`, { headers: HEADERS });
+            const extRes = await fetch(`${apiConfig.baseUrl}/${mediaType}/${item.id}/external_ids`, { headers: getHeaders() });
             const extData = await extRes.json();
             imdbId = extData.imdb_id;
-        } catch (e) {
-            console.error("Error fetching IMDb ID:", e);
-        }
+        } catch (e) {}
     }
 
     return {
@@ -50,81 +54,56 @@ async function normalize(item, type = null) {
         startYear: (item.release_date || item.first_air_date || '').split('-')[0],
         plot: item.overview,
         rating: { aggregateRating: item.vote_average?.toFixed(1) },
-        primaryImage: { url: item.poster_path ? `${API_CONFIG.IMAGE_BASE_URL}/w500${item.poster_path}` : null },
-        backdrop: item.backdrop_path ? `${API_CONFIG.IMAGE_BASE_URL}/original${item.backdrop_path}` : null
+        primaryImage: { url: item.poster_path ? `${apiConfig.imageBase}w500${item.poster_path}` : null },
+        backdrop: item.backdrop_path ? `${apiConfig.imageBase}original${item.backdrop_path}` : null
     };
 }
 
 export async function fetchTrending(type = 'all') {
-    if (!API_CONFIG.ACCESS_KEY && !API_CONFIG.API_KEY) return [];
-    const cached = cache.get(`trending_${type}`);
-    if (cached) return cached;
     try {
-        const res = await fetch(`${API_CONFIG.BASE_URL}/trending/${type}/week?language=en-US`, { headers: HEADERS });
+        const res = await fetch(`${apiConfig.baseUrl}/trending/${type}/week?language=${currentLang}`, { headers: getHeaders() });
         const data = await res.json();
-        if (!data.results) return [];
-        const results = await Promise.all(data.results.slice(0, 12).map(item => normalize(item)));
-        cache.set(`trending_${type}`, results);
-        return results;
-    } catch (error) {
-        return [];
-    }
-}
-
-export async function searchMedia(query) {
-    if (!API_CONFIG.ACCESS_KEY) return [];
-    try {
-        const res = await fetch(`${API_CONFIG.BASE_URL}/search/multi?query=${encodeURIComponent(query)}&language=en-US`, { headers: HEADERS });
-        const data = await res.json();
-        if (!data.results) return [];
-        return await Promise.all(data.results.filter(i => i.media_type !== 'person').map(item => normalize(item)));
-    } catch (error) {
-        return [];
-    }
+        return await Promise.all((data.results || []).slice(0, 12).map(item => normalize(item)));
+    } catch (e) { return []; }
 }
 
 export async function fetchTopRated() {
-    if (!API_CONFIG.ACCESS_KEY) return [];
-    const cached = cache.get('top_rated');
-    if (cached) return cached;
     try {
-        const res = await fetch(`${API_CONFIG.BASE_URL}/movie/top_rated?language=en-US&page=1`, { headers: HEADERS });
+        const res = await fetch(`${apiConfig.baseUrl}/movie/top_rated?language=${currentLang}&page=1`, { headers: getHeaders() });
         const data = await res.json();
-        if (!data.results) return [];
-        const results = await Promise.all(data.results.slice(0, 10).map(item => normalize(item, 'movie')));
-        cache.set('top_rated', results);
-        return results;
-    } catch (error) {
-        return [];
-    }
+        return await Promise.all((data.results || []).slice(0, 10).map(item => normalize(item, 'movie')));
+    } catch (e) { return []; }
 }
 
 export async function fetchSeries() {
-    if (!API_CONFIG.ACCESS_KEY) return [];
-    const cached = cache.get('popular_series');
-    if (cached) return cached;
     try {
-        const res = await fetch(`${API_CONFIG.BASE_URL}/tv/popular?language=en-US&page=1`, { headers: HEADERS });
+        const res = await fetch(`${apiConfig.baseUrl}/tv/popular?language=${currentLang}&page=1`, { headers: getHeaders() });
         const data = await res.json();
-        if (!data.results) return [];
-        const results = await Promise.all(data.results.slice(0, 10).map(item => normalize(item, 'tv')));
-        cache.set('popular_series', results);
-        return results;
-    } catch (error) {
-        return [];
-    }
+        return await Promise.all((data.results || []).slice(0, 10).map(item => normalize(item, 'tv')));
+    } catch (e) { return []; }
 }
 
-export async function fetchTrailer(tmdbId, type) {
-    if (!API_CONFIG.ACCESS_KEY) return null;
+export async function searchMedia(query) {
     try {
-        const res = await fetch(`${API_CONFIG.BASE_URL}/${type === 'MOVIE' ? 'movie' : 'tv'}/${tmdbId}/videos?language=en-US`, { headers: HEADERS });
+        const res = await fetch(`${apiConfig.baseUrl}/search/multi?query=${encodeURIComponent(query)}&language=${currentLang}`, { headers: getHeaders() });
         const data = await res.json();
-        const trailer = data.results?.find(v => v.type === 'Trailer' && v.site === 'YouTube');
-        return trailer ? `https://www.youtube.com/embed/${trailer.key}` : null;
-    } catch (e) {
-        return null;
-    }
+        return await Promise.all((data.results || []).filter(i => i.media_type !== 'person').map(item => normalize(item)));
+    } catch (e) { return []; }
+}
+
+export async function fetchFullDetails(tmdbId, type) {
+    const mediaType = type === 'TV_SERIES' ? 'tv' : 'movie';
+    try {
+        const res = await fetch(`${apiConfig.baseUrl}/${mediaType}/${tmdbId}?append_to_response=videos,credits,external_ids&language=${currentLang}`, { headers: getHeaders() });
+        const data = await res.json();
+        
+        const trailer = data.videos?.results?.find(v => v.type === 'Trailer' && v.site === 'YouTube');
+        return {
+            ...data,
+            trailerUrl: trailer ? `https://www.youtube.com/embed/${trailer.key}` : null,
+            imdbId: data.external_ids?.imdb_id || data.imdb_id
+        };
+    } catch (e) { return null; }
 }
 
 export function getEmbedUrl(type, id) {
