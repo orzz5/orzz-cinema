@@ -90,7 +90,9 @@ export function switchServer(serverType) {
     const id = currentItem.imdbId || currentItem.id;
     const isTV = currentItem.type === 'TV_SERIES';
     const audioCode = langMap[currentAudio] || 'en-US';
-    const audioParam = `&audio_lang=${audioCode}&audio=${currentAudio}`;
+    
+    // Forced audio parameters for Vidplays/Vidsrc compatibility
+    const audioParam = `&audio_lang=${audioCode}&audio=${currentAudio}&lang=${currentAudio}&primary_audio=${currentAudio}`;
     
     let url = '';
 
@@ -99,13 +101,13 @@ export function switchServer(serverType) {
             url = isTV ? `https://vidplays.fun/embed/tv/${id}/${currentS}/${currentE}?type=tv&s=${currentS}&e=${currentE}${audioParam}` : `https://vidplays.fun/embed/movie/${id}?type=movie${audioParam}`;
             break;
         case 'vidking':
-            url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=${currentS}&epi=${currentE}` : `https://vidking.net/embed/movie/${id}?color=a855f7`;
+            url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=${currentS}&epi=${currentE}${audioParam}` : `https://vidking.net/embed/movie/${id}?color=a855f7${audioParam}`;
             break;
         case 'vidsrc_to':
-            url = isTV ? `https://vidsrc.to/embed/tv/${id}/${currentS}/${currentE}` : `https://vidsrc.to/embed/movie/${id}`;
+            url = isTV ? `https://vidsrc.to/embed/tv/${id}/${currentS}/${currentE}${audioParam}` : `https://vidsrc.to/embed/movie/${id}${audioParam}`;
             break;
         case 'vidsrc_me':
-            url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=${currentS}&epi=${currentE}` : `https://vidsrc.me/embed/movie?imdb=${id}`;
+            url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=${currentS}&epi=${currentE}${audioParam}` : `https://vidsrc.me/embed/movie?imdb=${id}${audioParam}`;
             break;
     }
 
@@ -117,7 +119,7 @@ export function switchServer(serverType) {
 
 async function renderEpisodes(tvId, seasonNum) {
     UI.modal.episodesGrid.innerHTML = '<div class="loading-spinner">Loading Episodes...</div>';
-    const episodes = await fetchSeason(tvId, seasonNum);
+    const episodes = await fetchSeason(tvId, seasonNum, langMap[currentAudio]);
     UI.modal.episodesGrid.innerHTML = '';
     
     episodes.forEach(ep => {
@@ -150,7 +152,7 @@ export async function openPlayer(item) {
     UI.modal.title.textContent = item.primaryTitle;
     UI.modal.year.textContent = item.startYear;
     UI.modal.rating.textContent = `⭐ ${item.rating?.aggregateRating || 'N/A'}`;
-    UI.modal.overview.textContent = 'Syncing stream...';
+    UI.modal.overview.textContent = 'Translating metadata and syncing stream...';
     UI.modal.video.innerHTML = '<div class="loading-spinner">Locating Source...</div>';
     UI.modal.cast.innerHTML = '';
     UI.modal.recommendations.innerHTML = '';
@@ -162,10 +164,19 @@ export async function openPlayer(item) {
     UI.modal.el.scrollTo(0, 0);
     document.body.style.overflow = 'hidden';
 
-    const fullData = await fetchFullDetails(item.tmdbId, item.type);
+    await refreshModalContent(item);
+}
+
+async function refreshModalContent(item) {
+    const audioCode = langMap[currentAudio] || 'en-US';
+    const fullData = await fetchFullDetails(item.tmdbId, item.type, audioCode);
+    
     if (fullData) {
         const verifiedType = fullData.type || item.type;
         currentItem = { ...item, ...fullData, type: verifiedType };
+        
+        // Update translated UI
+        UI.modal.title.textContent = fullData.title || fullData.name || item.primaryTitle;
         UI.modal.overview.textContent = fullData.overview || item.plot;
         UI.modal.type.textContent = verifiedType === 'TV_SERIES' ? 'Series' : 'Movie';
 
@@ -173,7 +184,7 @@ export async function openPlayer(item) {
             UI.modal.tvControls.style.display = 'block';
             UI.modal.seasonSelect.innerHTML = (fullData.seasons || [])
                 .filter(s => s.season_number > 0)
-                .map(s => `<option value="${s.season_number}">${s.name}</option>`)
+                .map(s => `<option value="${s.season_number}" ${s.season_number === currentS ? 'selected' : ''}>${s.name}</option>`)
                 .join('');
             
             UI.modal.seasonSelect.onchange = (e) => {
@@ -184,6 +195,7 @@ export async function openPlayer(item) {
             renderEpisodes(item.tmdbId, currentS);
         }
 
+        UI.modal.cast.innerHTML = '';
         fullData.cast.forEach(actor => {
             const card = document.createElement('div');
             card.className = 'cast-card';
@@ -196,7 +208,9 @@ export async function openPlayer(item) {
             UI.modal.cast.appendChild(card);
         });
 
+        UI.modal.recommendations.innerHTML = '';
         renderGrid(fullData.recommendations, UI.modal.recommendations);
+        
         switchServer(currentServer);
 
         UI.modal.trailerBtn.onclick = () => {
@@ -221,9 +235,11 @@ window.onclick = (e) => { if (e.target == UI.modal.el) closePlayer(); };
 
 UI.modal.serverBtns.forEach(btn => btn.onclick = () => switchServer(btn.dataset.server));
 UI.modal.langBtns.forEach(btn => {
-    btn.onclick = () => {
+    btn.onclick = async () => {
+        if (currentAudio === btn.dataset.lang) return;
         currentAudio = btn.dataset.lang;
-        switchServer(currentServer);
+        UI.modal.overview.textContent = 'Translating...';
+        await refreshModalContent(currentItem);
     };
 });
 

@@ -11,7 +11,7 @@ const getHeaders = () => ({
     'Content-Type': 'application/json;charset=utf-8'
 });
 
-const DEFAULT_LANG = 'en-US';
+let currentAppLang = 'en-US';
 
 export async function initApi() {
     if (!apiConfig.accessToken) return false;
@@ -25,6 +25,11 @@ export async function initApi() {
     } catch (e) {
         return false;
     }
+}
+
+export function setApiLanguage(lang) {
+    const map = { 'en': 'en-US', 'es': 'es-ES', 'fr': 'fr-FR', 'pt': 'pt-PT', 'it': 'it-IT' };
+    currentAppLang = map[lang] || 'en-US';
 }
 
 async function normalize(item, type = null) {
@@ -59,7 +64,7 @@ async function normalize(item, type = null) {
 
 export async function fetchTrending(type = 'all') {
     try {
-        const url = `${apiConfig.baseUrl}/trending/${type}/week?language=${DEFAULT_LANG}&include_image_language=en,null`;
+        const url = `${apiConfig.baseUrl}/trending/${type}/week?language=${currentAppLang}&include_image_language=en,null`;
         const res = await fetch(url, { headers: getHeaders() });
         const data = await res.json();
         return await Promise.all((data.results || []).slice(0, 12).map(item => normalize(item)));
@@ -68,7 +73,7 @@ export async function fetchTrending(type = 'all') {
 
 export async function fetchNowPlaying() {
     try {
-        const url = `${apiConfig.baseUrl}/movie/now_playing?language=${DEFAULT_LANG}&page=1`;
+        const url = `${apiConfig.baseUrl}/movie/now_playing?language=${currentAppLang}&page=1`;
         const res = await fetch(url, { headers: getHeaders() });
         const data = await res.json();
         return await Promise.all((data.results || []).slice(0, 10).map(item => normalize(item, 'movie')));
@@ -77,7 +82,7 @@ export async function fetchNowPlaying() {
 
 export async function fetchUpcoming() {
     try {
-        const url = `${apiConfig.baseUrl}/movie/upcoming?language=${DEFAULT_LANG}&page=1`;
+        const url = `${apiConfig.baseUrl}/movie/upcoming?language=${currentAppLang}&page=1`;
         const res = await fetch(url, { headers: getHeaders() });
         const data = await res.json();
         return await Promise.all((data.results || []).slice(0, 10).map(item => normalize(item, 'movie')));
@@ -86,7 +91,7 @@ export async function fetchUpcoming() {
 
 export async function fetchAiringToday() {
     try {
-        const url = `${apiConfig.baseUrl}/tv/airing_today?language=${DEFAULT_LANG}&page=1`;
+        const url = `${apiConfig.baseUrl}/tv/airing_today?language=${currentAppLang}&page=1`;
         const res = await fetch(url, { headers: getHeaders() });
         const data = await res.json();
         return await Promise.all((data.results || []).slice(0, 10).map(item => normalize(item, 'tv')));
@@ -95,17 +100,17 @@ export async function fetchAiringToday() {
 
 export async function searchMedia(query) {
     try {
-        const url = `${apiConfig.baseUrl}/search/multi?query=${encodeURIComponent(query)}&language=${DEFAULT_LANG}&include_image_language=en,null`;
+        const url = `${apiConfig.baseUrl}/search/multi?query=${encodeURIComponent(query)}&language=${currentAppLang}&include_image_language=en,null`;
         const res = await fetch(url, { headers: getHeaders() });
         const data = await res.json();
         return await Promise.all((data.results || []).filter(i => i.media_type !== 'person').map(item => normalize(item)));
     } catch (e) { return []; }
 }
 
-export async function fetchFullDetails(tmdbId, type) {
+export async function fetchFullDetails(tmdbId, type, lang = 'en-US') {
     const mediaType = type === 'TV_SERIES' ? 'tv' : 'movie';
     try {
-        const url = `${apiConfig.baseUrl}/${mediaType}/${tmdbId}?append_to_response=videos,images,credits,recommendations,external_ids&language=${DEFAULT_LANG}&include_image_language=en,null`;
+        const url = `${apiConfig.baseUrl}/${mediaType}/${tmdbId}?append_to_response=videos,images,credits,recommendations,external_ids&language=${lang}&include_image_language=en,null`;
         const res = await fetch(url, { headers: getHeaders() });
         const data = await res.json();
         
@@ -129,9 +134,9 @@ export async function fetchFullDetails(tmdbId, type) {
     } catch (e) { return null; }
 }
 
-export async function fetchSeason(tvId, seasonNum) {
+export async function fetchSeason(tvId, seasonNum, lang = 'en-US') {
     try {
-        const res = await fetch(`${apiConfig.baseUrl}/tv/${tvId}/season/${seasonNum}?language=${DEFAULT_LANG}`, { headers: getHeaders() });
+        const res = await fetch(`${apiConfig.baseUrl}/tv/${tvId}/season/${seasonNum}?language=${lang}`, { headers: getHeaders() });
         const data = await res.json();
         return (data.episodes || []).map(e => ({
             name: e.name,
