@@ -5,7 +5,6 @@ let currentServer = 'vidplays';
 let currentS = 1;
 let currentE = 1;
 let currentAudio = 'en';
-let currentSub = 'off';
 let isSwitching = false;
 
 const langMap = {
@@ -36,7 +35,6 @@ export const UI = {
         overview: document.querySelector('#modal-overview'),
         serverBtns: document.querySelectorAll('.server-btn'),
         langBtns: document.querySelectorAll('.lang-btn'),
-        subBtns: document.querySelectorAll('.sub-btn'),
         trailerBtn: document.querySelector('#watch-trailer-btn'),
         cast: document.querySelector('#modal-cast'),
         recommendations: document.querySelector('#modal-recommendations'),
@@ -96,12 +94,8 @@ export function switchServer(serverType, force = false) {
     const isTV = currentItem.type === 'TV_SERIES';
     const lang = langMap[currentAudio] || langMap.en;
     
-    // Multi-Parameter Injection for Audio and Subtitles
-    let params = `&audio=${lang.vidsrc}&audio_lang=${lang.tmdb}`;
-    
-    if (currentSub !== 'off') {
-        params += `&sub_lang=${currentSub}&subtitle=${currentSub}&ds_lang=${currentSub}`;
-    }
+    // Pass Audio AND Subtitle parameters tied to the chosen language
+    const params = `&audio=${lang.vidsrc}&audio_lang=${lang.tmdb}&sub_lang=${lang.vidsrc}&subtitle_lang=${lang.tmdb}`;
     
     let url = '';
     switch(serverType) {
@@ -125,7 +119,6 @@ export function switchServer(serverType, force = false) {
     
     UI.modal.serverBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.server === serverType));
     UI.modal.langBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.lang === currentAudio));
-    UI.modal.subBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.sub === currentSub));
 }
 
 async function renderEpisodes(tvId, seasonNum) {
@@ -267,14 +260,6 @@ UI.modal.langBtns.forEach(btn => {
         if (currentAudio === btn.dataset.lang || isSwitching || !currentItem) return;
         currentAudio = btn.dataset.lang;
         await refreshModalContent(currentItem);
-    };
-});
-
-UI.modal.subBtns.forEach(btn => {
-    btn.onclick = () => {
-        if (currentSub === btn.dataset.sub || isSwitching || !currentItem) return;
-        currentSub = btn.dataset.sub;
-        switchServer(currentServer);
     };
 });
 
