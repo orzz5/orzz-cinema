@@ -30,9 +30,9 @@ const cache = {
 
 async function normalize(item, type = null) {
     const isTV = type === 'tv' || item.media_type === 'tv' || item.first_air_date !== undefined;
-    
     let imdbId = item.imdb_id || null;
-    if (!imdbId) {
+    
+    if (API_CONFIG.ACCESS_KEY && !imdbId) {
         try {
             const extRes = await fetch(`${API_CONFIG.BASE_URL}/${isTV ? 'tv' : 'movie'}/${item.id}/external_ids`, { headers: HEADERS });
             const extData = await extRes.json();
@@ -56,69 +56,71 @@ async function normalize(item, type = null) {
 }
 
 export async function fetchTrending(type = 'all') {
+    if (!API_CONFIG.ACCESS_KEY && !API_CONFIG.API_KEY) return [];
     const cached = cache.get(`trending_${type}`);
     if (cached) return cached;
-
     try {
         const res = await fetch(`${API_CONFIG.BASE_URL}/trending/${type}/week?language=en-US`, { headers: HEADERS });
         const data = await res.json();
+        if (!data.results) return [];
         const results = await Promise.all(data.results.slice(0, 12).map(item => normalize(item)));
         cache.set(`trending_${type}`, results);
         return results;
     } catch (error) {
-        console.error('Error fetching trending:', error);
         return [];
     }
 }
 
 export async function searchMedia(query) {
+    if (!API_CONFIG.ACCESS_KEY) return [];
     try {
         const res = await fetch(`${API_CONFIG.BASE_URL}/search/multi?query=${encodeURIComponent(query)}&language=en-US`, { headers: HEADERS });
         const data = await res.json();
+        if (!data.results) return [];
         return await Promise.all(data.results.filter(i => i.media_type !== 'person').map(item => normalize(item)));
     } catch (error) {
-        console.error('Search error:', error);
         return [];
     }
 }
 
 export async function fetchTopRated() {
+    if (!API_CONFIG.ACCESS_KEY) return [];
     const cached = cache.get('top_rated');
     if (cached) return cached;
-
     try {
         const res = await fetch(`${API_CONFIG.BASE_URL}/movie/top_rated?language=en-US&page=1`, { headers: HEADERS });
         const data = await res.json();
+        if (!data.results) return [];
         const results = await Promise.all(data.results.slice(0, 10).map(item => normalize(item, 'movie')));
         cache.set('top_rated', results);
         return results;
     } catch (error) {
-        console.error('Error fetching top rated:', error);
         return [];
     }
 }
 
 export async function fetchSeries() {
+    if (!API_CONFIG.ACCESS_KEY) return [];
     const cached = cache.get('popular_series');
     if (cached) return cached;
-
     try {
         const res = await fetch(`${API_CONFIG.BASE_URL}/tv/popular?language=en-US&page=1`, { headers: HEADERS });
         const data = await res.json();
+        if (!data.results) return [];
         const results = await Promise.all(data.results.slice(0, 10).map(item => normalize(item, 'tv')));
         cache.set('popular_series', results);
         return results;
     } catch (error) {
-        console.error('Error fetching series:', error);
         return [];
     }
 }
 
 export async function fetchTrailer(tmdbId, type) {
+    if (!API_CONFIG.ACCESS_KEY) return null;
     try {
         const res = await fetch(`${API_CONFIG.BASE_URL}/${type === 'MOVIE' ? 'movie' : 'tv'}/${tmdbId}/videos?language=en-US`, { headers: HEADERS });
         const data = await res.json();
-        const trailer = data.results.find(v => v.type === 'Trailer' && v.site === 'YouTube');
+        const trailer = data.results?.find(v => v.type === 'Trailer' && v.site === 'YouTube');
         return trailer ? `https://www.youtube.com/embed/${trailer.key}` : null;
     } catch (e) {
         return null;
