@@ -86,6 +86,20 @@ header.scrolled { background: rgba(18, 9, 29, 0.98); border-bottom: 1px solid va
 .btn-trailer:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); }
 #modal-overview { color: var(--text-muted); line-height: 1.8; font-size: 1.1rem; margin-bottom: 3rem; }
 
+.modal-episodes-section { margin-top: 2.5rem; }
+.episodes-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+.season-dropdown { background: var(--surface-light); color: white; border: 1px solid var(--glass-border); padding: 0.5rem 1rem; border-radius: 8px; outline: none; font-family: inherit; font-weight: 600; cursor: pointer; }
+.episodes-gallery { display: flex; gap: 1.5rem; overflow-x: auto; padding-bottom: 1.5rem; scrollbar-width: thin; scrollbar-color: var(--primary-color) transparent; }
+.episode-card { flex: 0 0 240px; cursor: pointer; transition: 0.3s; }
+.episode-card:hover { transform: translateY(-5px); }
+.episode-still-container { width: 100%; aspect-ratio: 16/9; border-radius: 12px; overflow: hidden; margin-bottom: 0.8rem; border: 2px solid transparent; transition: 0.3s; position: relative; }
+.episode-card.active .episode-still-container { border-color: var(--primary-color); box-shadow: 0 0 15px rgba(168, 85, 247, 0.4); }
+.episode-still { width: 100%; height: 100%; object-fit: cover; }
+.episode-play-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; opacity: 0; transition: 0.3s; }
+.episode-card:hover .episode-play-overlay { opacity: 1; }
+.episode-info h5 { font-size: 0.9rem; font-weight: 700; color: white; margin-bottom: 0.2rem; }
+.episode-info span { font-size: 0.8rem; color: var(--text-muted); }
+
 .modal-cast-section, .modal-recommendations-section { margin-top: 3rem; }
 h4 { font-size: 1.4rem; margin-bottom: 1.5rem; font-weight: 700; color: white; border-bottom: 2px solid var(--primary-color); display: inline-block; padding-bottom: 0.5rem; }
 

@@ -1,7 +1,9 @@
-import { getEmbedUrl, fetchFullDetails } from './api.js';
+import { getEmbedUrl, fetchFullDetails, fetchSeason } from './api.js';
 
 let currentItem = null;
 let currentServer = 'vidplays';
+let currentS = 1;
+let currentE = 1;
 
 export const UI = {
     header: document.querySelector('#main-header'),
@@ -24,7 +26,10 @@ export const UI = {
         serverBtns: document.querySelectorAll('.server-btn'),
         trailerBtn: document.querySelector('#watch-trailer-btn'),
         cast: document.querySelector('#modal-cast'),
-        recommendations: document.querySelector('#modal-recommendations')
+        recommendations: document.querySelector('#modal-recommendations'),
+        tvControls: document.querySelector('#tv-controls'),
+        seasonSelect: document.querySelector('#season-select'),
+        episodesGrid: document.querySelector('#episodes-grid')
     },
     hero: {
         section: document.querySelector('#hero'),
@@ -78,16 +83,16 @@ export function switchServer(serverType) {
 
     switch(serverType) {
         case 'vidplays':
-            url = isTV ? `https://vidplays.fun/embed/tv/${id}/1/1?type=tv&s=1&e=1` : `https://vidplays.fun/embed/movie/${id}?type=movie`;
+            url = isTV ? `https://vidplays.fun/embed/tv/${id}/${currentS}/${currentE}?type=tv&s=${currentS}&e=${currentE}` : `https://vidplays.fun/embed/movie/${id}?type=movie`;
             break;
         case 'vidking':
-            url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=1&epi=1` : `https://vidking.net/embed/movie/${id}?color=a855f7`;
+            url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=${currentS}&epi=${currentE}` : `https://vidking.net/embed/movie/${id}?color=a855f7`;
             break;
         case 'vidsrc_to':
-            url = isTV ? `https://vidsrc.to/embed/tv/${id}/1/1` : `https://vidsrc.to/embed/movie/${id}`;
+            url = isTV ? `https://vidsrc.to/embed/tv/${id}/${currentS}/${currentE}` : `https://vidsrc.to/embed/movie/${id}`;
             break;
         case 'vidsrc_me':
-            url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=1&epi=1` : `https://vidsrc.me/embed/movie?imdb=${id}`;
+            url = isTV ? `https://vidsrc.me/embed/tv?imdb=${id}&sea=${currentS}&epi=${currentE}` : `https://vidsrc.me/embed/movie?imdb=${id}`;
             break;
     }
 
@@ -95,15 +100,48 @@ export function switchServer(serverType) {
     UI.modal.serverBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.server === serverType));
 }
 
+async function renderEpisodes(tvId, seasonNum) {
+    UI.modal.episodesGrid.innerHTML = '<div class="loading-spinner">Loading Episodes...</div>';
+    const episodes = await fetchSeason(tvId, seasonNum);
+    UI.modal.episodesGrid.innerHTML = '';
+    
+    episodes.forEach(ep => {
+        const card = document.createElement('div');
+        card.className = `episode-card ${ep.episodeNumber === currentE ? 'active' : ''}`;
+        const still = ep.still || 'https://via.placeholder.com/300x169/12091d/a855f7?text=Episode';
+        
+        card.innerHTML = `
+            <div class="episode-still-container">
+                <img src="${still}" alt="${ep.name}" class="episode-still">
+                <div class="episode-play-overlay"><i class="fas fa-play"></i></div>
+            </div>
+            <div class="episode-info">
+                <h5>${ep.episodeNumber}. ${ep.name}</h5>
+                <span>S${seasonNum} E${ep.episodeNumber}</span>
+            </div>
+        `;
+        
+        card.onclick = () => {
+            currentE = ep.episodeNumber;
+            document.querySelectorAll('.episode-card').forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+            switchServer(currentServer);
+        };
+        UI.modal.episodesGrid.appendChild(card);
+    });
+}
+
 export async function openPlayer(item) {
     UI.modal.title.textContent = item.primaryTitle;
     UI.modal.year.textContent = item.startYear;
     UI.modal.rating.textContent = `⭐ ${item.rating?.aggregateRating || 'N/A'}`;
-    UI.modal.type.textContent = item.type === 'TV_SERIES' ? 'Series' : 'Movie';
-    UI.modal.overview.textContent = 'Syncing high-quality stream...';
+    UI.modal.overview.textContent = 'Syncing stream...';
     UI.modal.video.innerHTML = '<div class="loading-spinner">Locating Source...</div>';
     UI.modal.cast.innerHTML = '';
     UI.modal.recommendations.innerHTML = '';
+    UI.modal.tvControls.style.display = 'none';
+    currentS = 1;
+    currentE = 1;
 
     UI.modal.el.classList.add('active');
     UI.modal.el.scrollTo(0, 0);
@@ -111,14 +149,26 @@ export async function openPlayer(item) {
 
     const fullData = await fetchFullDetails(item.tmdbId, item.type);
     if (fullData) {
-        // Sync the verified type from TMDB
         const verifiedType = fullData.type || item.type;
         currentItem = { ...item, ...fullData, type: verifiedType };
-        
         UI.modal.overview.textContent = fullData.overview || item.plot;
         UI.modal.type.textContent = verifiedType === 'TV_SERIES' ? 'Series' : 'Movie';
-        
-        // Render Cast
+
+        if (verifiedType === 'TV_SERIES') {
+            UI.modal.tvControls.style.display = 'block';
+            UI.modal.seasonSelect.innerHTML = (fullData.seasons || [])
+                .filter(s => s.season_number > 0)
+                .map(s => `<option value="${s.season_number}">${s.name}</option>`)
+                .join('');
+            
+            UI.modal.seasonSelect.onchange = (e) => {
+                currentS = parseInt(e.target.value);
+                currentE = 1;
+                renderEpisodes(item.tmdbId, currentS);
+            };
+            renderEpisodes(item.tmdbId, currentS);
+        }
+
         fullData.cast.forEach(actor => {
             const card = document.createElement('div');
             card.className = 'cast-card';
@@ -131,16 +181,14 @@ export async function openPlayer(item) {
             UI.modal.cast.appendChild(card);
         });
 
-        // Render Recommendations
         renderGrid(fullData.recommendations, UI.modal.recommendations);
-
         switchServer(currentServer);
 
         UI.modal.trailerBtn.onclick = () => {
             if (fullData.trailerUrl) {
                 UI.modal.video.innerHTML = `<iframe src="${fullData.trailerUrl}" allowfullscreen></iframe>`;
             } else {
-                alert('Trailer not available for this title.');
+                alert('Trailer not available.');
             }
         };
     }

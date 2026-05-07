@@ -28,7 +28,6 @@ export async function initApi() {
 }
 
 async function normalize(item, type = null) {
-    // Aggressive TV detection
     const isTV = type === 'tv' || 
                  item.media_type === 'tv' || 
                  item.first_air_date !== undefined || 
@@ -125,10 +124,22 @@ export async function fetchFullDetails(tmdbId, type) {
             imdbId: data.external_ids?.imdb_id || data.imdb_id,
             cast,
             recommendations,
-            // Re-verify type in case it was wrong in the grid
             type: (data.first_air_date || data.name) ? 'TV_SERIES' : 'MOVIE'
         };
     } catch (e) { return null; }
+}
+
+export async function fetchSeason(tvId, seasonNum) {
+    try {
+        const res = await fetch(`${apiConfig.baseUrl}/tv/${tvId}/season/${seasonNum}?language=${DEFAULT_LANG}`, { headers: getHeaders() });
+        const data = await res.json();
+        return (data.episodes || []).map(e => ({
+            name: e.name,
+            episodeNumber: e.episode_number,
+            overview: e.overview,
+            still: e.still_path ? `${apiConfig.imageBase}w300${e.still_path}` : null
+        }));
+    } catch (e) { return []; }
 }
 
 export function getEmbedUrl(type, id) {
